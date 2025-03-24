@@ -1,0 +1,69 @@
+/* src/pages/admin/category/css/Editcate.scss */
+
+/* Hiệu ứng xuất hiện cho Card */
+.cardContainer {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInSlide 0.8s ease forwards;
+  
+    &:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+  }
+  
+  @keyframes fadeInSlide {
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Nền gradient cho trang */
+  .pageContainer {
+    background: linear-gradient(135deg, #f0f2f5 0%, #e6f0fa 100%);
+  }
+  
+  /* Hiệu ứng hover cho nút */
+  .buttonPrimary {
+    &:hover {
+      background-color: #1557b0 !important;
+      border-color: #1557b0 !important;
+      transform: scale(1.05);
+      transition: all 0.3s ease;
+    }
+  }
+  
+  .buttonSecondary {
+    &:hover {
+      background-color: #f5f5f5 !important;
+      transform: scale(1.05);
+      transition: all 0.3s ease;
+    }
+  }
+  
+  /* Style cho tiêu đề */
+  .titleContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 30px;
+  
+    .ant-typography {
+      margin: 0;
+      color: #1a73e8;
+    }
+  }
+  
+  /* Style cho Switch */
+  .ant-switch {
+    &.ant-switch-checked {
+      background-color: #1a73e8;
+    }
+  }
