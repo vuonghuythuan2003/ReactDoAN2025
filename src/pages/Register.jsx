@@ -2,7 +2,6 @@ import React from 'react';
 import { Form, Input, Button } from 'antd';
 import { UserOutlined, MailOutlined, LockOutlined, PhoneOutlined, HomeOutlined } from '@ant-design/icons';
 import axios from 'axios';
-import styles from '../css/Register.module.css';
 
 function Register() {
   const [form] = Form.useForm();

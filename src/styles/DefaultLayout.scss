@@ -1,0 +1,60 @@
+/* src/styles/DefaultLayout.css */
+.navbar {
+    background-color: #1a1a1a;
+    padding: 15px 0;
+  }
+  
+  .navbar-brand img {
+    height: 40px;
+    width: auto;
+  }
+  
+  .nav-link {
+    color: #fff !important;
+    font-weight: 500;
+    margin: 0 15px;
+    transition: color 0.3s ease;
+  }
+  
+  .nav-link:hover {
+    color: #ffd700 !important;
+  }
+  
+  .navbar-icons {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  
+  .navbar-icons svg {
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+  
+  .navbar-icons svg:hover {
+    color: #ffd700;
+  }
+  
+  .footer {
+    background-color: #1a1a1a;
+    color: #fff;
+    padding: 50px 0;
+  }
+  
+  .footer h5 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+  
+  .footer a {
+    color: #ccc;
+    text-decoration: none;
+    transition: color 0.3s ease;
+  }
+  
+  .footer a:hover {
+    color: #ffd700;
+  }

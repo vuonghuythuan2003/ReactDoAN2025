@@ -20,16 +20,14 @@ const Dashboard = () => {
   const [topSpendingCustomers, setTopSpendingCustomers] = useState([]);
   const [trafficData, setTrafficData] = useState([]);
   const [browserStats, setBrowserStats] = useState([]);
-  const [revenueData, setRevenueData] = useState([]); // New state for revenue by category
+  const [revenueData, setRevenueData] = useState([]); 
 
-  // Set default date range to February 2025 (as per your test)
   const defaultFrom = moment('2025-02-01T00:00:00').toDate();
   const defaultTo = moment('2025-02-27T23:59:59').toDate();
   const [dateRange, setDateRange] = useState([moment(defaultFrom), moment(defaultTo)]);
   const [from, setFrom] = useState(defaultFrom.toISOString());
   const [to, setTo] = useState(defaultTo.toISOString());
 
-  // Handle date range change
   const onDateRangeChange = (dates) => {
     if (dates) {
       setDateRange(dates);
@@ -38,12 +36,10 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch data for the dashboard
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch total users
         const userResponse = await axios.get('http://localhost:8080/api/v1/admin/users', {
           params: {
             page: 0,

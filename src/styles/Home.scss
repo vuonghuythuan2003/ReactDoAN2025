@@ -1,0 +1,132 @@
+/* src/styles/Home.scss */
+
+/* Banner Styles */
+.banner-container {
+    width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .banner-carousel {
+    width: 100%;
+    height: 500px; /* Adjust height as needed */
+  }
+  
+  .banner-image {
+    width: 100%;
+    height: 500px;
+    object-fit: cover; /* Ensure the image covers the area without distortion */
+  }
+  
+  .banner-caption {
+    background: rgba(0, 0, 0, 0.5); /* Semi-transparent background for readability */
+    padding: 20px;
+    border-radius: 8px;
+  }
+  
+  .banner-caption h3 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 10px;
+  }
+  
+  .banner-caption p {
+    font-size: 1.2rem;
+    color: #fff;
+    margin-bottom: 20px;
+  }
+  
+  .banner-button {
+    background-color: #007bff;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+  }
+  
+  .banner-button:hover {
+    background-color: #0056b3;
+  }
+  
+  /* Product Section Styles */
+  .product-section {
+    padding: 40px 0;
+    background-color: #f8f9fa;
+  }
+  
+  .product-section h2 {
+    font-size: 2rem;
+    margin-bottom: 30px;
+    color: #333;
+    font-weight: bold;
+  }
+  
+  .search-bar .form-control {
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    padding: 10px 20px;
+    font-size: 1rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+  }
+  
+  .search-bar .form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+    outline: none;
+  }
+  
+  .brand-section {
+    padding: 40px 0;
+  }
+  
+  .brand-section h2 {
+    font-size: 2rem;
+    margin-bottom: 30px;
+    color: #333;
+    font-weight: bold;
+  }
+  
+  .brand-logo {
+    width: 100%;
+    height: 80px;
+    object-fit: contain;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    transition: transform 0.3s ease;
+  }
+  
+  .brand-logo:hover {
+    transform: scale(1.05);
+  }
+  
+  @media (max-width: 768px) {
+    .banner-carousel,
+    .banner-image {
+      height: 300px;
+    }
+  
+    .banner-caption h3 {
+      font-size: 1.5rem;
+    }
+  
+    .banner-caption p {
+      font-size: 1rem;
+    }
+  
+    .banner-button {
+      padding: 8px 16px;
+      font-size: 0.9rem;
+    }
+  
+    .product-section h2,
+    .brand-section h2 {
+      font-size: 1.5rem;
+    }
+  
+    .search-bar .form-control {
+      width: 100%;
+    }
+  }

@@ -1,85 +1,37 @@
-import React, { useState } from 'react';
-import { LaptopOutlined, NotificationOutlined, UserOutlined, AppstoreOutlined, MenuFoldOutlined, MenuUnfoldOutlined, BulbOutlined, BulbFilled } from '@ant-design/icons';
+import React from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { Layout, Menu, theme, Button, ConfigProvider } from 'antd';
-import { useNavigate, Outlet } from 'react-router-dom';
+import { useNavigate, Outlet, useLocation } from 'react-router-dom';
+import { ClockCircleOutlined, UserOutlined, ShoppingCartOutlined, AppstoreOutlined, MenuFoldOutlined, MenuUnfoldOutlined, BulbOutlined, BulbFilled, TagOutlined, CommentOutlined } from '@ant-design/icons';
+import { toggleCollapsed, toggleDarkMode } from '../redux/reducers/LayoutSlice'; // Đường dẫn đã sửa
 
 const { Header, Content, Footer, Sider } = Layout;
 
-// Menu ở sidebar
-const items2 = [
-  {
-    key: 'sub1',
-    icon: <UserOutlined />,
-    label: 'Dashboard',
-    children: [
-      { key: 'dashboard', label: 'Thống kê khách hàng' },
-    ],
-  },
-  {
-    key: 'sub2',
-    icon: <UserOutlined />,
-    label: 'Quản lý người dùng',
-    children: [
-      { key: 'user', label: 'Danh sách người dùng' },
-    ],
-  },
-  {
-    key: 'sub3',
-    icon: <NotificationOutlined />,
-    label: 'Quản lý đơn hàng',
-    children: [
-      { key: 'order', label: 'Danh sách đơn hàng' },
-    ],
-  },
-  {
-    key: 'sub4',
-    icon: <LaptopOutlined />,
-    label: 'Quản lý sản phẩm',
-    children: [
-      { key: 'add/product', label: 'Thêm sản phẩm' },
-      { key: 'product', label: 'Danh sách sản phẩm' },
-    ],
-  },
-  {
-    key: 'sub5',
-    icon: <AppstoreOutlined />,
-    label: 'Quản lý danh mục',
-    children: [
-      { key: 'add/category', label: 'Thêm danh mục' },
-      { key: 'category', label: 'Danh sách danh mục' },
-    ],
-  },
-  {
-    key: 'sub6',
-    icon: <AppstoreOutlined />,
-    label: 'Quản lý bình luận',
-    children: [
-      { key: 'comment/admin', label: 'Quản lý bình luận' },
-    ],
-  },
+const items = [
+  { key: 'dashboard', icon: <ClockCircleOutlined />, label: 'Thống kê' },
+  { key: 'user', icon: <UserOutlined />, label: 'Quản lý người dùng' },
+  { key: 'order', icon: <ShoppingCartOutlined />, label: 'Quản lý đơn hàng' },
+  { key: 'product', icon: <AppstoreOutlined />, label: 'Quản lý sản phẩm' },
+  { key: 'category', icon: <AppstoreOutlined />, label: 'Quản lý danh mục' },
+  { key: 'comment/admin', icon: <CommentOutlined />, label: 'Quản lý bình luận' },
+  { key: 'brand', icon: <TagOutlined />, label: 'Quản lý thương hiệu' },
 ];
 
 const AdminLayout = () => {
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true); // Default to dark mode to match screenshot
+  const location = useLocation();
+  const dispatch = useDispatch();
+  const { collapsed, isDarkMode } = useSelector((state) => state.layout);
 
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
-  const toggleCollapsed = () => {
-    setCollapsed(!collapsed);
-  };
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-  };
-
   const handleMenuClick = (e) => {
-    console.log('Navigating to:', `/admin/${e.key}`);
     navigate(`/admin/${e.key}`);
   };
+
+  const selectedKey = location.pathname.split('/admin/')[1] || 'dashboard';
 
   return (
     <ConfigProvider
@@ -110,42 +62,56 @@ const AdminLayout = () => {
       }}
     >
       <Layout style={{ minHeight: '100vh' }}>
-        <Header
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 16px',
-            background: isDarkMode ? '#001529' : '#ffffff',
-          }}
-        >
-          <div style={{ color: isDarkMode ? '#fff' : '#000', fontSize: 18, fontWeight: 'bold' }}>
-            Admin Panel
+        <style>
+          {`
+            .header {
+              transition: all 0.3s ease;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            }
+            .header:hover {
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            }
+            .sider {
+              transition: width 0.3s ease;
+              box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+            }
+            .menu-item {
+              transition: all 0.3s ease;
+            }
+            .menu-item:hover {
+              transform: scale(1.05);
+              background-color: ${isDarkMode ? '#003a8c' : '#e6f7ff'} !important;
+            }
+            .toggle-button {
+              transition: all 0.3s ease;
+            }
+            .toggle-button:hover {
+              transform: scale(1.1);
+              background-color: ${isDarkMode ? '#40c4ff' : '#1557b0'} !important;
+            }
+            .content {
+              transition: all 0.3s ease;
+            }
+          `}
+        </style>
+        <Header className="header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: isDarkMode ? '#001529' : '#ffffff' }}>
+          <div style={{ color: isDarkMode ? '#fff' : '#1a73e8', fontSize: 18, fontWeight: 'bold' }}>
+            Watch Store Admin
           </div>
           <Button
             type="primary"
             icon={isDarkMode ? <BulbFilled /> : <BulbOutlined />}
-            onClick={toggleTheme}
-            style={{
-              background: isDarkMode ? '#40c4ff' : '#1a73e8',
-              borderColor: isDarkMode ? '#40c4ff' : '#1a73e8',
-            }}
+            onClick={() => dispatch(toggleDarkMode())}
+            className="toggle-button"
+            style={{ background: isDarkMode ? '#40c4ff' : '#1a73e8', borderColor: isDarkMode ? '#40c4ff' : '#1a73e8' }}
           >
             {isDarkMode ? 'Chế độ sáng' : 'Chế độ tối'}
           </Button>
         </Header>
         <Layout>
-          <Sider
-            style={{
-              background: isDarkMode ? '#001529' : '#ffffff',
-            }}
-            width={250}
-            collapsible
-            collapsed={collapsed}
-            trigger={null}
-          >
+          <Sider className="sider" width={250} collapsible collapsed={collapsed} trigger={null} style={{ background: isDarkMode ? '#001529' : '#ffffff' }}>
             <div
-              onClick={toggleCollapsed}
+              onClick={() => dispatch(toggleCollapsed())}
               style={{
                 color: isDarkMode ? '#fff' : '#000',
                 fontSize: '18px',
@@ -155,48 +121,27 @@ const AdminLayout = () => {
                 height: '64px',
                 lineHeight: '64px',
                 borderBottom: `1px solid ${isDarkMode ? '#424242' : '#f0f0f0'}`,
+                transition: 'all 0.3s ease',
               }}
             >
               {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             </div>
             <Menu
               mode="inline"
-              defaultSelectedKeys={['dashboard']}
-              defaultOpenKeys={['sub1']}
-              style={{
-                height: 'calc(100% - 64px)',
-                borderRight: 0,
-              }}
-              items={items2}
+              selectedKeys={[selectedKey]}
+              style={{ height: 'calc(100% - 64px)', borderRight: 0 }}
+              items={items}
               onClick={handleMenuClick}
               theme={isDarkMode ? 'dark' : 'light'}
+              className="menu-item"
             />
           </Sider>
-          <Layout
-            style={{
-              padding: '24px',
-              background: isDarkMode ? '#141414' : '#f0f2f5',
-            }}
-          >
-            <Content
-              style={{
-                padding: '24px',
-                margin: 0,
-                minHeight: 280,
-                background: isDarkMode ? '#1f1f1f' : colorBgContainer,
-                borderRadius: borderRadiusLG,
-              }}
-            >
-              <Outlet context={{ isDarkMode, toggleTheme }} />
+          <Layout style={{ padding: '24px', background: isDarkMode ? '#141414' : '#f0f2f5' }}>
+            <Content className="content" style={{ padding: '24px', margin: 0, minHeight: 280, background: colorBgContainer, borderRadius: borderRadiusLG }}>
+              <Outlet context={{ isDarkMode, toggleTheme: () => dispatch(toggleDarkMode()) }} />
             </Content>
-            <Footer
-              style={{
-                textAlign: 'center',
-                background: isDarkMode ? '#141414' : '#f0f2f5',
-                color: isDarkMode ? '#e6e6e6' : '#000000',
-              }}
-            >
-              Ant Design ©{new Date().getFullYear()} Created by Ant UED
+            <Footer style={{ textAlign: 'center', background: isDarkMode ? '#141414' : '#f0f2f5', color: isDarkMode ? '#e6e6e6' : '#000000' }}>
+              Watch Store Admin ©{new Date().getFullYear()} Created by xAI
             </Footer>
           </Layout>
         </Layout>

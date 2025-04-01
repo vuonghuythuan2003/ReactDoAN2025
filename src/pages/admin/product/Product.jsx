@@ -1,147 +1,104 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, Typography, Card, Modal, Tooltip, Spin, Descriptions } from 'antd';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { EditOutlined, DeleteOutlined, PlusOutlined, EyeOutlined } from '@ant-design/icons';
+import { useSelector, useDispatch } from 'react-redux';
+import { Table, Button, Space, Typography, Card, Modal, Tooltip, Spin, Descriptions, Form, Input, InputNumber, Select, Upload, Row, Col } from 'antd';
+import { EditOutlined, DeleteOutlined, PlusOutlined, EyeOutlined, UploadOutlined } from '@ant-design/icons';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Image } from 'antd';
+import { fetchProducts, fetchProductDetail, addProduct, updateProduct, deleteProduct, setCurrentPage, setPageSize, clearSelectedProduct, setCategories, setBrands, setSearchText } from '../../../redux/reducers/ProductSlice';
+import axios from 'axios';
 
 const { Title } = Typography;
+const { Option } = Select;
 
 const Product = () => {
-  const navigate = useNavigate();
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
-  const [isModalVisible, setIsModalVisible] = useState(false); // State để quản lý modal
-  const [selectedProduct, setSelectedProduct] = useState(null); // State để lưu chi tiết sản phẩm
+  const dispatch = useDispatch();
+  const { products, filteredProducts, categories, brands, selectedProduct, loading, error, currentPage, pageSize, searchText } = useSelector((state) => state.products);
 
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
+  const [fileList, setFileList] = useState([]);
+  const [editFileList, setEditFileList] = useState([]);
+  const [initialImage, setInitialImage] = useState(null);
+
+  // Lấy dữ liệu ban đầu
   useEffect(() => {
-    const fetchData = async () => {
-      const startTime = Date.now();
-
+    const fetchInitialData = async () => {
       try {
-        const categoryResponse = await axios.get('http://localhost:8080/api/v1/admin/categories');
-        const categoryData = categoryResponse.data.content || categoryResponse.data;
-
-        if (!Array.isArray(categoryData)) {
-          throw new Error('Dữ liệu danh mục trả về không đúng định dạng (không phải mảng).');
-        }
-        setCategories(categoryData);
-
-        const productResponse = await axios.get('http://localhost:8080/api/v1/admin/products');
-        const productData = productResponse.data.content || productResponse.data;
-
-        if (!Array.isArray(productData)) {
-          throw new Error('Dữ liệu sản phẩm trả về không đúng định dạng (không phải mảng).');
-        }
-
-        const elapsedTime = Date.now() - startTime;
-        const remainingTime = 4000 - elapsedTime;
-
-        setTimeout(() => {
-          setProducts(productData);
-          setLoading(false);
-        }, remainingTime > 0 ? remainingTime : 0);
+        const [categoryRes, brandRes] = await Promise.all([
+          axios.get('http://localhost:8080/api/v1/admin/categories', { params: { page: 0, size: 1000 } }),
+          axios.get('http://localhost:8080/api/v1/admin/brands', { params: { page: 0, size: 1000 } }),
+        ]);
+        dispatch(setCategories(categoryRes.data.content || categoryRes.data));
+        dispatch(setBrands(brandRes.data.content || brandRes.data));
+        dispatch(fetchProducts());
       } catch (error) {
-        console.error('Lỗi khi lấy dữ liệu:', error);
-        let errorMessage = 'Không thể lấy dữ liệu!';
-        if (error.response) {
-          if (typeof error.response.data === 'string') {
-            errorMessage = error.response.data;
-          } else if (error.response.data?.message) {
-            errorMessage = error.response.data.message;
-          }
-          if (error.response.status === 400) {
-            errorMessage = errorMessage || 'Yêu cầu không hợp lệ.';
-          } else if (error.response.status === 500) {
-            errorMessage = errorMessage || 'Lỗi server. Vui lòng thử lại sau.';
-          }
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-        toast.error(errorMessage, {
-          position: 'top-right',
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
-
-        const elapsedTime = Date.now() - startTime;
-        const remainingTime = 4000 - elapsedTime;
-        setTimeout(() => {
-          setLoading(false);
-        }, remainingTime > 0 ? remainingTime : 0);
+        toast.error('Không thể tải dữ liệu ban đầu!', { position: 'top-right', autoClose: 3000 });
       }
     };
-    fetchData();
-  }, []);
+    fetchInitialData();
+  }, [dispatch]);
 
-  // Hàm lấy chi tiết sản phẩm
-  const fetchProductDetail = async (productId) => {
-    setLoading(true);
-    const startTime = Date.now();
-    try {
-      const response = await axios.get(`http://localhost:8080/api/v1/admin/products/${productId}`);
-      const data = response.data;
-
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = 4000 - elapsedTime;
-
-      setTimeout(() => {
-        setSelectedProduct(data);
-        setIsModalVisible(true);
-        setLoading(false);
-      }, remainingTime > 0 ? remainingTime : 0);
-    } catch (error) {
-      console.error('Lỗi khi lấy chi tiết sản phẩm:', error);
-      let errorMessage = 'Không thể lấy chi tiết sản phẩm!';
-      if (error.response) {
-        if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data;
-        } else if (error.response.data?.message) {
-          errorMessage = error.response.data.message;
-        }
-        if (error.response.status === 404) {
-          errorMessage = 'Sản phẩm không tồn tại.';
-        } else if (error.response.status === 500) {
-          errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      toast.error(errorMessage, {
-        position: 'top-right',
-        autoClose: 3000,
-      });
-
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = 4000 - elapsedTime;
-      setTimeout(() => {
-        setLoading(false);
-      }, remainingTime > 0 ? remainingTime : 0);
+  // Hiển thị thông báo lỗi từ Redux
+  useEffect(() => {
+    if (error) {
+      toast.error(error, { position: 'top-right', autoClose: 3000 });
     }
-  };
+  }, [error]);
 
-  // Xử lý xem chi tiết sản phẩm
   const handleViewDetail = (record) => {
-    fetchProductDetail(record.productId);
+    dispatch(fetchProductDetail(record.productId)).then(() => {
+      setIsModalVisible(true);
+    });
   };
 
-  // Đóng modal
   const handleModalClose = () => {
     setIsModalVisible(false);
-    setSelectedProduct(null);
+    dispatch(clearSelectedProduct());
   };
 
-  const handleTableChange = (pagination) => {
-    setCurrentPage(pagination.current);
-    setPageSize(pagination.pageSize);
+  const handleAddModalOpen = () => {
+    setIsAddModalVisible(true);
+    form.resetFields();
+    setFileList([]);
+  };
+
+  const handleAddModalClose = () => {
+    setIsAddModalVisible(false);
+    form.resetFields();
+    setFileList([]);
+  };
+
+  const handleEditModalOpen = (record) => {
+    dispatch(fetchProductDetail(record.productId)).then((result) => {
+      if (result.meta.requestStatus === 'fulfilled') {
+        const productData = result.payload;
+        editForm.setFieldsValue({
+          productName: productData.productName,
+          sku: productData.sku,
+          description: productData.description,
+          unitPrice: productData.unitPrice,
+          stockQuantity: productData.stockQuantity,
+          soldQuantity: productData.soldQuantity || 0,
+          categoryId: productData.categoryId,
+          brandId: productData.brandId,
+        });
+        setInitialImage(productData.image || null);
+        setEditFileList([]);
+        setIsEditModalVisible(true);
+      }
+    });
+  };
+
+  const handleEditModalClose = () => {
+    setIsEditModalVisible(false);
+    editForm.resetFields();
+    setEditFileList([]);
+    setInitialImage(null);
+    dispatch(clearSelectedProduct());
   };
 
   const handleDelete = (productId, productName) => {
@@ -151,91 +108,67 @@ const Product = () => {
       okText: 'Xóa',
       okType: 'danger',
       cancelText: 'Hủy',
-      onOk: async () => {
-        try {
-          const response = await axios.delete(`http://localhost:8080/api/v1/admin/products/${productId}`);
-          setProducts(products.filter((product) => product.productId !== productId));
-          toast.success(response.data || `Xóa sản phẩm "${productName}" thành công!`, {
-            position: 'top-right',
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-          });
-          setCurrentPage(1);
-        } catch (error) {
-          console.error('Lỗi khi xóa sản phẩm:', error);
-          let errorMessage = 'Xóa sản phẩm thất bại! Vui lòng thử lại.';
-          
-          if (error.response) {
-            console.log('Error response data:', error.response.data);
-            if (typeof error.response.data === 'string') {
-              errorMessage = error.response.data;
-            } else if (error.response.data?.message) {
-              errorMessage = error.response.data.message;
-            }
-            if (error.response.status === 400) {
-              errorMessage = errorMessage || 'Không thể xóa sản phẩm do lỗi dữ liệu.';
-            } else if (error.response.status === 404) {
-              errorMessage = 'Sản phẩm không tồn tại.';
-            } else if (error.response.status === 500) {
-              errorMessage = errorMessage || 'Lỗi server. Vui lòng thử lại sau.';
-            }
-          } else if (error.message) {
-            errorMessage = error.message;
+      onOk: () => {
+        dispatch(deleteProduct(productId)).then((result) => {
+          if (result.meta.requestStatus === 'fulfilled') {
+            toast.success(`Xóa sản phẩm "${productName}" thành công!`, { position: 'top-right', autoClose: 3000 });
+            dispatch(setCurrentPage(1));
           }
-
-          console.log('Error message to display:', errorMessage);
-          toast.error(errorMessage, {
-            position: 'top-right',
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-          });
-        }
+        });
       },
       onCancel: () => {
-        toast.info('Hủy xóa sản phẩm.', {
-          position: 'top-right',
-          autoClose: 2000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
+        toast.info('Hủy xóa sản phẩm.', { position: 'top-right', autoClose: 2000 });
       },
     });
   };
 
-  // Định dạng ngày
+  const handleUploadChange = ({ fileList: newFileList }) => {
+    setFileList(newFileList);
+  };
+
+  const handleEditUploadChange = ({ fileList: newFileList }) => {
+    setEditFileList(newFileList);
+  };
+
+  const onAddFinish = (values) => {
+    const productData = { ...values, image: fileList };
+    dispatch(addProduct(productData)).then((result) => {
+      if (result.meta.requestStatus === 'fulfilled') {
+        toast.success('Thêm sản phẩm thành công!', { position: 'top-right', autoClose: 3000 });
+        handleAddModalClose();
+      }
+    });
+  };
+
+  const onEditFinish = (values) => {
+    const productData = { ...values, image: editFileList };
+    dispatch(updateProduct({ productId: selectedProduct.productId, productData })).then((result) => {
+      if (result.meta.requestStatus === 'fulfilled') {
+        toast.success('Cập nhật sản phẩm thành công!', { position: 'top-right', autoClose: 3000 });
+        handleEditModalClose();
+      }
+    });
+  };
+
+  const onFinishFailed = () => {
+    toast.error('Vui lòng kiểm tra lại các trường thông tin!', { position: 'top-right', autoClose: 3000 });
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return date.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  // Định dạng tiền tệ
   const formatCurrency = (value) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(value);
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
   };
 
   const columns = [
     {
       title: 'STT',
       key: 'index',
-      render: (_, __, index) => startIndex + index + 1,
+      render: (_, __, index) => (currentPage - 1) * pageSize + index + 1,
       width: '5%',
       align: 'center',
     },
@@ -258,7 +191,7 @@ const Product = () => {
       title: 'Mô tả',
       dataIndex: 'description',
       key: 'description',
-      width: '20%',
+      width: '15%',
       align: 'center',
     },
     {
@@ -267,14 +200,7 @@ const Product = () => {
       key: 'image',
       render: (image) => (
         image ? (
-          <Image
-            src={image}
-            alt="Hình ảnh sản phẩm"
-            width={50}
-            height={50}
-            style={{ objectFit: 'cover', borderRadius: 4 }}
-            preview={true}
-          />
+          <Image src={image} alt="Hình ảnh sản phẩm" width={50} height={50} style={{ objectFit: 'cover', borderRadius: 4 }} preview />
         ) : (
           <span>Không có hình ảnh</span>
         )
@@ -312,8 +238,19 @@ const Product = () => {
       dataIndex: 'categoryId',
       key: 'categoryId',
       render: (categoryId) => {
-        const category = categories.find((cat) => cat.categoryId === categoryId);
-        return category ? category.categoryName : 'N/A';
+        const category = categories.find((cat) => String(cat.categoryId) === String(categoryId));
+        return category ? category.categoryName : 'Không có danh mục';
+      },
+      width: '8%',
+      align: 'center',
+    },
+    {
+      title: 'Thương hiệu',
+      dataIndex: 'brandId',
+      key: 'brandId',
+      render: (brandId) => {
+        const brand = brands.find((br) => String(br.brandId) === String(brandId));
+        return brand ? brand.brandName : 'Không có thương hiệu';
       },
       width: '8%',
       align: 'center',
@@ -342,28 +279,13 @@ const Product = () => {
       render: (_, record) => (
         <Space size="middle">
           <Tooltip title="Xem chi tiết sản phẩm">
-            <Button
-              type="default"
-              className="viewButton"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewDetail(record)}
-            />
+            <Button type="default" className="viewButton" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)} />
           </Tooltip>
           <Tooltip title="Sửa sản phẩm">
-            <Button
-              type="default"
-              className="editButton"
-              icon={<EditOutlined />}
-              onClick={() => navigate(`/admin/edit/product/${record.productId}`)}
-            />
+            <Button type="default" className="editButton" icon={<EditOutlined />} onClick={() => handleEditModalOpen(record)} />
           </Tooltip>
           <Tooltip title="Xóa sản phẩm">
-            <Button
-              type="default"
-              className="deleteButton"
-              icon={<DeleteOutlined />}
-              onClick={() => handleDelete(record.productId, record.productName)}
-            />
+            <Button type="default" className="deleteButton" icon={<DeleteOutlined />} onClick={() => handleDelete(record.productId, record.productName)} />
           </Tooltip>
         </Space>
       ),
@@ -372,45 +294,31 @@ const Product = () => {
     },
   ];
 
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedData = products.slice(startIndex, endIndex);
+  const paginatedData = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <>
       <style>
         {`
-          /* Hiệu ứng xuất hiện cho hàng trong bảng */
           .table-row {
             opacity: 0;
             transform: translateX(-20px);
             animation: fadeInSlide 0.5s ease forwards;
           }
-
           .table-row:nth-child(1) { animation-delay: 0.1s; }
           .table-row:nth-child(2) { animation-delay: 0.2s; }
           .table-row:nth-child(3) { animation-delay: 0.3s; }
           .table-row:nth-child(4) { animation-delay: 0.4s; }
           .table-row:nth-child(5) { animation-delay: 0.5s; }
           .table-row:nth-child(n + 6) { animation-delay: 0.6s; }
-
           .table-row:hover {
             background-color: #e6f7ff !important;
             transition: background-color 0.3s ease;
           }
-
           @keyframes fadeInSlide {
-            0% {
-              opacity: 0;
-              transform: translateX(-20px);
-            }
-            100% {
-              opacity: 1;
-              transform: translateX(0);
-            }
+            0% { opacity: 0; transform: translateX(-20px); }
+            100% { opacity: 1; transform: translateX(0); }
           }
-
-          /* Style cho bảng */
           .tableContainer {
             background: linear-gradient(135deg, #f9fbff 0%, #e6f0fa 100%);
             border-radius: 8px;
@@ -418,7 +326,6 @@ const Product = () => {
             border: 1px solid #e6f0fa;
             padding: 8px;
           }
-
           .tableContainer .ant-table-thead > tr > th {
             background: #1a73e8;
             color: #fff;
@@ -426,136 +333,55 @@ const Product = () => {
             border-bottom: 2px solid #1557b0;
             text-align: center;
           }
-
           .tableContainer .ant-table-tbody > tr > td {
             border-bottom: 1px solid #e6f0fa;
             text-align: center;
           }
-
           .tableContainer .ant-table-tbody > tr:hover > td {
             background: #e6f7ff;
             transition: background 0.3s ease;
           }
-
-          /* Style cho phân trang */
           .ant-pagination-item {
             border-radius: 4px;
             border: 1px solid #e6f0fa;
           }
-
-          .ant-pagination-item a {
-            color: #1a73e8;
-          }
-
-          .ant-pagination-item:hover {
-            border-color: #1a73e8;
-          }
-
-          .ant-pagination-item:hover a {
-            color: #1557b0;
-          }
-
-          .ant-pagination-item-active {
-            background: #1a73e8;
-            border-color: #1a73e8;
-          }
-
-          .ant-pagination-item-active a {
-            color: #fff;
-          }
-
-          .ant-pagination-prev,
-          .ant-pagination-next {
+          .ant-pagination-item a { color: #1a73e8; }
+          .ant-pagination-item:hover { border-color: #1a73e8; }
+          .ant-pagination-item:hover a { color: #1557b0; }
+          .ant-pagination-item-active { background: #1a73e8; border-color: #1a73e8; }
+          .ant-pagination-item-active a { color: #fff; }
+          .ant-pagination-prev, .ant-pagination-next {
             border-radius: 4px;
             border: 1px solid #e6f0fa;
             color: #1a73e8;
           }
-
-          .ant-pagination-prev:hover,
-          .ant-pagination-next:hover {
+          .ant-pagination-prev:hover, .ant-pagination-next:hover {
             border-color: #1a73e8;
             color: #1557b0;
           }
-
-          /* Style cho Spin (loading) */
-          .ant-spin-dot-item {
-            background-color: #1a73e8;
-          }
-
-          .ant-spin-text {
-            color: #1a73e8;
-            font-weight: 500;
-            margin-top: 10px;
-          }
-
-          /* Style cho nút Xem chi tiết, Sửa và Xóa */
-          .viewButton {
-            background: #f0f2f5;
-            border-color: #595959;
-            color: #595959;
-            transition: all 0.3s ease;
-          }
-
-          .viewButton:hover {
-            background: #595959;
-            color: #fff;
-            border-color: #595959;
-            transform: scale(1.05);
-          }
-
-          .editButton {
-            background: #e6f7ff;
-            border-color: #1a73e8;
-            color: #1a73e8;
-            transition: all 0.3s ease;
-          }
-
-          .editButton:hover {
-            background: #1a73e8;
-            color: #fff;
-            border-color: #1a73e8;
-            transform: scale(1.05);
-          }
-
-          .deleteButton {
-            background: #fff1f0;
-            border-color: #f5222d;
-            color: #f5222d;
-            transition: all 0.3s ease;
-          }
-
-          .deleteButton:hover {
-            background: #f5222d;
-            color: #fff;
-            border-color: #f5222d;
-            transform: scale(1.05);
-          }
-
-          /* Style cho toast */
-          .Toastify__toast--success {
-            background: #e6f7ff !important;
-            color: #1a73e8 !important;
-            font-weight: 500;
-          }
-
-          .Toastify__toast--error {
-            background: #fff1f0 !important;
-            color: #f5222d !important;
-            font-weight: 500;
-          }
-
-          .Toastify__toast--info {
-            background: #f0f2f5 !important;
-            color: #595959 !important;
-            font-weight: 500;
-          }
-
-          /* Style cho bảng khi không có dữ liệu */
-          .ant-table-placeholder {
-            background: #f9fbff;
-            color: #595959;
-            font-style: italic;
-          }
+          .ant-spin-dot-item { background-color: #1a73e8; }
+          .ant-spin-text { color: #1a73e8; font-weight: 500; margin-top: 10px; }
+          .viewButton { background: #f0f2f5; border-color: #595959; color: #595959; transition: all 0.3s ease; }
+          .viewButton:hover { background: #595959; color: #fff; border-color: #595959; transform: scale(1.05); }
+          .editButton { background: #e6f7ff; border-color: #1a73e8; color: #1a73e8; transition: all 0.3s ease; }
+          .editButton:hover { background: #1a73e8; color: #fff; border-color: #1a73e8; transform: scale(1.05); }
+          .deleteButton { background: #fff1f0; border-color: #f5222d; color: #f5222d; transition: all 0.3s ease; }
+          .deleteButton:hover { background: #f5222d; color: #fff; border-color: #f5222d; transform: scale(1.05); }
+          .Toastify__toast--success { background: #e6f7ff !important; color: #1a73e8 !important; font-weight: 500; }
+          .Toastify__toast--error { background: #fff1f0 !important; color: #f5222d !important; font-weight: 500; }
+          .Toastify__toast--info { background: #f0f2f5 !important; color: #595959 !important; font-weight: 500; }
+          .ant-table-placeholder { background: #f9fbff; color: #595959; font-style: italic; }
+          .formContainer { background: #f0f7ff; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+          .ant-form-item-label > label { font-weight: 500; color: #333; }
+          .ant-input, .ant-input-number, .ant-select-selector { border-radius: 4px !important; border: 1px solid #d9d9d9 !important; }
+          .ant-input:hover, .ant-input-number:hover, .ant-select-selector:hover { border-color: #1a73e8 !important; }
+          .ant-input:focus, .ant-input-number:focus, .ant-select-selector:focus { border-color: #1a73e8 !important; box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2) !important; }
+          .submitButton { background: #1a73e8; border-color: #1a73e8; border-radius: 4px; height: 40px; font-weight: 500; transition: all 0.3s ease; }
+          .submitButton:hover { background: #1557b0; border-color: #1557b0; transform: scale(1.05); }
+          .cancelButton { border-radius: 4px; height: 40px; font-weight: 500; transition: all 0.3s ease; }
+          .cancelButton:hover { border-color: #f5222d; color: #f5222d; transform: scale(1.05); }
+          .ant-input-search .ant-input { border-radius: 4px 0 0 4px !important; }
+          .ant-input-search .ant-btn { border-radius: 0 4px 4px 0 !important; }
         `}
       </style>
 
@@ -563,68 +389,59 @@ const Product = () => {
         <Title level={2} style={{ textAlign: 'center', color: '#1a73e8', marginBottom: '30px' }}>
           Danh sách sản phẩm
         </Title>
-        <Card
-          style={{
-            borderRadius: 8,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-            background: '#fff',
-          }}
-          styles={{ body: { padding: '24px' } }}
-        >
-          <Spin spinning={loading} tip="Đang tải dữ liệu..." size="large">
+        <Card style={{ borderRadius: 8, background: '#fff', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
+          <Spin spinning={loading} tip="Đang tải dữ liệu...">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Title level={4} style={{ margin: 0, color: '#333' }}>
-                Tổng số sản phẩm: {products.length}
+                Tổng số sản phẩm: {filteredProducts.length}
               </Title>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => navigate('/admin/add/product')}
-                style={{
-                  borderRadius: 4,
-                  backgroundColor: '#1a73e8',
-                  borderColor: '#1a73e8',
-                  height: 40,
-                  fontWeight: 500,
-                }}
-              >
-                Thêm sản phẩm mới
-              </Button>
+              <Space>
+                <Input.Search
+                  placeholder="Tìm kiếm sản phẩm"
+                  value={searchText}
+                  onChange={(e) => dispatch(setSearchText(e.target.value))}
+                  onSearch={(value) => dispatch(setSearchText(value))}
+                  style={{ width: 200 }}
+                />
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleAddModalOpen}
+                  style={{ backgroundColor: '#1a73e8', borderColor: '#1a73e8', height: 40, fontWeight: 500 }}
+                >
+                  Thêm sản phẩm mới
+                </Button>
+              </Space>
             </div>
             <Table
               className="tableContainer"
               columns={columns}
               dataSource={paginatedData}
               rowKey="productId"
-              locale={{
-                emptyText: 'Không có dữ liệu sản phẩm để hiển thị.',
-              }}
               pagination={{
                 current: currentPage,
-                pageSize: pageSize,
-                total: products.length,
+                pageSize,
+                total: filteredProducts.length,
                 showSizeChanger: true,
                 pageSizeOptions: ['5', '10', '20'],
                 showTotal: (total) => `Tổng ${total} sản phẩm`,
-                onChange: (page, pageSize) => handleTableChange({ current: page, pageSize }),
+                onChange: (page, pageSize) => {
+                  dispatch(setCurrentPage(page));
+                  dispatch(setPageSize(pageSize));
+                },
               }}
-              style={{ borderRadius: 8 }}
+              locale={{ emptyText: 'Không có dữ liệu sản phẩm để hiển thị.' }}
               scroll={{ x: 'max-content' }}
               rowClassName={() => 'table-row'}
             />
           </Spin>
         </Card>
 
-        {/* Modal hiển thị chi tiết sản phẩm */}
         <Modal
           title="Chi tiết sản phẩm"
           open={isModalVisible}
           onCancel={handleModalClose}
-          footer={[
-            <Button key="close" onClick={handleModalClose}>
-              Đóng
-            </Button>,
-          ]}
+          footer={<Button onClick={handleModalClose}>Đóng</Button>}
           width={800}
         >
           {selectedProduct && (
@@ -635,28 +452,311 @@ const Product = () => {
               <Descriptions.Item label="Mô tả">{selectedProduct.description}</Descriptions.Item>
               <Descriptions.Item label="Hình ảnh">
                 {selectedProduct.image ? (
-                  <Image
-                    src={selectedProduct.image}
-                    alt="Hình ảnh sản phẩm"
-                    width={100}
-                    height={100}
-                    style={{ objectFit: 'cover', borderRadius: 4 }}
-                    preview={true}
-                  />
+                  <Image src={selectedProduct.image} alt="Hình ảnh sản phẩm" width={100} height={100} style={{ objectFit: 'cover', borderRadius: 4 }} preview />
                 ) : (
-                  <span>Không có hình ảnh</span>
+                  'Không có hình ảnh'
                 )}
               </Descriptions.Item>
               <Descriptions.Item label="Giá">{formatCurrency(selectedProduct.unitPrice)}</Descriptions.Item>
               <Descriptions.Item label="Tồn kho">{selectedProduct.stockQuantity}</Descriptions.Item>
               <Descriptions.Item label="Đã bán">{selectedProduct.soldQuantity}</Descriptions.Item>
               <Descriptions.Item label="Danh mục">
-                {categories.find((cat) => cat.categoryId === selectedProduct.categoryId)?.categoryName || 'N/A'}
+                {categories.find((cat) => String(cat.categoryId) === String(selectedProduct.categoryId))?.categoryName || 'Không có danh mục'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Thương hiệu">
+                {brands.find((br) => String(br.brandId) === String(selectedProduct.brandId))?.brandName || 'Không có thương hiệu'}
               </Descriptions.Item>
               <Descriptions.Item label="Ngày tạo">{formatDate(selectedProduct.createdAt)}</Descriptions.Item>
               <Descriptions.Item label="Ngày cập nhật">{formatDate(selectedProduct.updatedAt)}</Descriptions.Item>
             </Descriptions>
           )}
+        </Modal>
+
+        <Modal
+          title="Thêm sản phẩm mới"
+          open={isAddModalVisible}
+          onCancel={handleAddModalClose}
+          footer={null}
+          width={800}
+        >
+          <Spin spinning={loading} tip="Đang xử lý...">
+            <div className="formContainer">
+              <Form form={form} layout="vertical" onFinish={onAddFinish} onFinishFailed={onFinishFailed} initialValues={{ soldQuantity: 0 }}>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Tên sản phẩm"
+                      name="productName"
+                      rules={[
+                        { required: true, message: 'Tên sản phẩm không được để trống' },
+                        { max: 100, message: 'Tên sản phẩm không được vượt quá 100 ký tự' },
+                      ]}
+                    >
+                      <Input placeholder="Nhập tên sản phẩm" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item
+                      label="SKU"
+                      name="sku"
+                      rules={[
+                        { required: true, message: 'SKU không được để trống' },
+                        { max: 100, message: 'SKU không được vượt quá 100 ký tự' },
+                      ]}
+                    >
+                      <Input placeholder="Nhập SKU" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Form.Item label="Mô tả" name="description">
+                  <Input.TextArea rows={4} placeholder="Nhập mô tả sản phẩm" />
+                </Form.Item>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Đơn giá (VND)"
+                      name="unitPrice"
+                      rules={[
+                        { required: true, message: 'Đơn giá không được để trống' },
+                        { type: 'number', min: 0.01, message: 'Đơn giá phải lớn hơn 0' },
+                      ]}
+                    >
+                      <InputNumber
+                        style={{ width: '100%' }}
+                        placeholder="Nhập đơn giá"
+                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Số lượng tồn kho"
+                      name="stockQuantity"
+                      rules={[
+                        { required: true, message: 'Số lượng tồn kho không được để trống' },
+                        { type: 'number', min: 0, message: 'Số lượng tồn kho không được âm' },
+                      ]}
+                    >
+                      <InputNumber style={{ width: '100%' }} placeholder="Nhập số lượng tồn kho" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Số lượng đã bán"
+                      name="soldQuantity"
+                      rules={[{ type: 'number', min: 0, message: 'Số lượng đã bán không được âm' }]}
+                    >
+                      <InputNumber style={{ width: '100%' }} placeholder="Nhập số lượng đã bán" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Danh mục"
+                      name="categoryId"
+                      rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}
+                    >
+                      <Select placeholder="Chọn danh mục">
+                        {categories.map((category) => (
+                          <Option key={category.categoryId} value={category.categoryId}>
+                            {category.categoryName}
+                          </Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Thương hiệu"
+                      name="brandId"
+                      rules={[{ required: true, message: 'Vui lòng chọn thương hiệu' }]}
+                    >
+                      <Select placeholder="Chọn thương hiệu">
+                        {brands.map((brand) => (
+                          <Option key={brand.brandId} value={brand.brandId}>
+                            {brand.brandName}
+                          </Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item label="Hình ảnh" name="image">
+                      <Upload
+                        fileList={fileList}
+                        onChange={handleUploadChange}
+                        beforeUpload={() => false}
+                        accept="image/*"
+                        maxCount={1}
+                      >
+                        <Button icon={<UploadOutlined />}>Chọn hình ảnh</Button>
+                      </Upload>
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Form.Item style={{ textAlign: 'center' }}>
+                  <Button type="primary" htmlType="submit" className="submitButton" loading={loading} style={{ width: 150 }}>
+                    Thêm sản phẩm
+                  </Button>
+                  <Button className="cancelButton" style={{ marginLeft: 16, width: 150 }} onClick={handleAddModalClose}>
+                    Hủy
+                  </Button>
+                </Form.Item>
+              </Form>
+            </div>
+          </Spin>
+        </Modal>
+
+        <Modal
+          title="Chỉnh sửa sản phẩm"
+          open={isEditModalVisible}
+          onCancel={handleEditModalClose}
+          footer={null}
+          width={800}
+        >
+          <Spin spinning={loading} tip="Đang xử lý...">
+            <div className="formContainer">
+              <Form form={editForm} layout="vertical" onFinish={onEditFinish} onFinishFailed={onFinishFailed}>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Tên sản phẩm"
+                      name="productName"
+                      rules={[
+                        { required: true, message: 'Tên sản phẩm không được để trống' },
+                        { max: 100, message: 'Tên sản phẩm không được vượt quá 100 ký tự' },
+                        { whitespace: true, message: 'Tên sản phẩm không được chỉ chứa khoảng trắng' },
+                      ]}
+                    >
+                      <Input placeholder="Nhập tên sản phẩm" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item
+                      label="SKU"
+                      name="sku"
+                      rules={[
+                        { required: true, message: 'SKU không được để trống' },
+                        { max: 100, message: 'SKU không được vượt quá 100 ký tự' },
+                        { whitespace: true, message: 'SKU không được chỉ chứa khoảng trắng' },
+                      ]}
+                    >
+                      <Input placeholder="Nhập SKU" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Form.Item label="Mô tả" name="description">
+                  <Input.TextArea rows={4} placeholder="Nhập mô tả sản phẩm" />
+                </Form.Item>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Đơn giá (VND)"
+                      name="unitPrice"
+                      rules={[
+                        { required: true, message: 'Đơn giá không được để trống' },
+                        { type: 'number', min: 0.01, message: 'Đơn giá phải lớn hơn 0' },
+                      ]}
+                    >
+                      <InputNumber
+                        style={{ width: '100%' }}
+                        placeholder="Nhập đơn giá"
+                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Số lượng tồn kho"
+                      name="stockQuantity"
+                      rules={[
+                        { required: true, message: 'Số lượng tồn kho không được để trống' },
+                        { type: 'number', min: 0, message: 'Số lượng tồn kho không được âm' },
+                      ]}
+                    >
+                      <InputNumber style={{ width: '100%' }} placeholder="Nhập số lượng tồn kho" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Số lượng đã bán"
+                      name="soldQuantity"
+                      rules={[{ type: 'number', min: 0, message: 'Số lượng đã bán không được âm' }]}
+                    >
+                      <InputNumber style={{ width: '100%' }} placeholder="Nhập số lượng đã bán" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Danh mục"
+                      name="categoryId"
+                      rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}
+                    >
+                      <Select placeholder="Chọn danh mục">
+                        {categories.map((category) => (
+                          <Option key={category.categoryId} value={category.categoryId}>
+                            {category.categoryName}
+                          </Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Thương hiệu"
+                      name="brandId"
+                      rules={[{ required: true, message: 'Vui lòng chọn thương hiệu' }]}
+                    >
+                      <Select placeholder="Chọn thương hiệu">
+                        {brands.map((brand) => (
+                          <Option key={brand.brandId} value={brand.brandId}>
+                            {brand.brandName}
+                          </Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item label="Hình ảnh hiện tại">
+                      {initialImage ? (
+                        <Image src={initialImage} alt="Hình ảnh sản phẩm" width={100} height={100} style={{ objectFit: 'cover', borderRadius: 4 }} />
+                      ) : (
+                        <span>Không có hình ảnh</span>
+                      )}
+                    </Form.Item>
+                    <Form.Item label="Hình ảnh mới" name="image">
+                      <Upload
+                        fileList={editFileList}
+                        onChange={handleEditUploadChange}
+                        beforeUpload={() => false}
+                        accept="image/*"
+                        maxCount={1}
+                      >
+                        <Button icon={<UploadOutlined />}>Chọn hình ảnh</Button>
+                      </Upload>
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Form.Item style={{ textAlign: 'center' }}>
+                  <Button type="primary" htmlType="submit" className="submitButton" loading={loading} style={{ width: 150 }}>
+                    Cập nhật
+                  </Button>
+                  <Button className="cancelButton" style={{ marginLeft: 16, width: 150 }} onClick={handleEditModalClose}>
+                    Hủy
+                  </Button>
+                </Form.Item>
+              </Form>
+            </div>
+          </Spin>
         </Modal>
       </div>
     </>

@@ -1,0 +1,47 @@
+/* src/styles/Footer.scss */
+.footer {
+    background-color: #1a1a1a; /* Đồng bộ với Header */
+    padding: 20px 0; /* Tăng padding để footer rộng rãi hơn */
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2); /* Bóng đổ ngược hướng so với Header */
+    color: #fff; /* Màu chữ trắng đồng bộ */
+  
+    h5 {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #ff0000; /* Điểm nhấn đỏ cho tiêu đề */
+      margin-bottom: 15px;
+      text-transform: uppercase;
+    }
+  
+    p {
+      font-size: 1rem;
+      margin: 5px 0;
+      color: #fff; /* Màu chữ trắng */
+    }
+  
+    a {
+      color: #fff; /* Liên kết trắng */
+      text-decoration: none;
+      transition: color 0.3s ease; /* Hiệu ứng chuyển màu giống Header */
+    }
+  
+    a:hover {
+      color: #ff0000; /* Hover chuyển thành đỏ, giống Header */
+    }
+  
+    .container {
+      padding: 0 15px; /* Đảm bảo căn lề đồng đều */
+    }
+  
+    /* Responsive */
+    @media (max-width: 991px) {
+      .col-md-4 {
+        text-align: center;
+        margin-bottom: 20px; /* Khoảng cách giữa các cột khi xuống mobile */
+      }
+  
+      h5 {
+        margin-top: 20px;
+      }
+    }
+  }

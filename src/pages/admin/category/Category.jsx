@@ -1,135 +1,102 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Space, Typography, Card, Modal, Tooltip, Spin, Descriptions } from 'antd';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useSelector, useDispatch } from 'react-redux';
+import { Table, Button, Space, Typography, Card, Modal, Tooltip, Spin, Descriptions, Form, Input, Switch, Row, Col } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { fetchCategories, fetchCategoryDetail, addCategory, updateCategory, deleteCategory, setCurrentPage, setPageSize, setSearchText, clearSelectedCategory } from '../../../redux/reducers/CategorySlice';
 
 const { Title } = Typography;
 
 const Category = () => {
-  const navigate = useNavigate();
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
-  const [isModalVisible, setIsModalVisible] = useState(false); // State để quản lý modal
-  const [selectedCategory, setSelectedCategory] = useState(null); // State để lưu chi tiết danh mục
+  const dispatch = useDispatch();
+  const { categories, filteredCategories, selectedCategory, loading, error, currentPage, pageSize, searchText } = useSelector((state) => state.categories);
 
+  const [isModalVisible, setIsModalVisible] = useState(false); // Modal chi tiết danh mục
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false); // Modal thêm danh mục
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false); // Modal chỉnh sửa danh mục
+  const [form] = Form.useForm(); // Form để thêm danh mục
+  const [editForm] = Form.useForm(); // Form để chỉnh sửa danh mục
+
+  // Lấy danh sách danh mục khi component mount
   useEffect(() => {
-    const fetchCategories = async () => {
-      const startTime = Date.now();
+    dispatch(fetchCategories());
+  }, [dispatch]);
 
-      try {
-        const response = await axios.get('http://localhost:8080/api/v1/admin/categories');
-        const data = response.data.content || response.data;
-
-        if (!Array.isArray(data)) {
-          throw new Error('Dữ liệu trả về không đúng định dạng (không phải mảng).');
-        }
-
-        const elapsedTime = Date.now() - startTime;
-        const remainingTime = 4000 - elapsedTime;
-
-        setTimeout(() => {
-          setCategories(data);
-          setLoading(false);
-        }, remainingTime > 0 ? remainingTime : 0);
-      } catch (error) {
-        console.error('Lỗi khi lấy danh sách danh mục:', error);
-        let errorMessage = 'Không thể lấy danh sách danh mục!';
-        if (error.response) {
-          if (typeof error.response.data === 'string') {
-            errorMessage = error.response.data;
-          } else if (error.response.data?.message) {
-            errorMessage = error.response.data.message;
-          }
-          if (error.response.status === 400) {
-            errorMessage = errorMessage || 'Yêu cầu không hợp lệ.';
-          } else if (error.response.status === 500) {
-            errorMessage = errorMessage || 'Lỗi server. Vui lòng thử lại sau.';
-          }
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-        toast.error(errorMessage, {
-          position: 'top-right',
-          autoClose: 3000,
-        });
-
-        const elapsedTime = Date.now() - startTime;
-        const remainingTime = 4000 - elapsedTime;
-        setTimeout(() => {
-          setLoading(false);
-        }, remainingTime > 0 ? remainingTime : 0);
-      }
-    };
-    fetchCategories();
-  }, []);
-
-  // Hàm lấy chi tiết danh mục
-  const fetchCategoryDetail = async (categoryId) => {
-    setLoading(true);
-    const startTime = Date.now();
-    try {
-      const response = await axios.get(`http://localhost:8080/api/v1/admin/categories/${categoryId}`);
-      const data = response.data;
-
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = 4000 - elapsedTime;
-
-      setTimeout(() => {
-        setSelectedCategory(data);
-        setIsModalVisible(true);
-        setLoading(false);
-      }, remainingTime > 0 ? remainingTime : 0);
-    } catch (error) {
-      console.error('Lỗi khi lấy chi tiết danh mục:', error);
-      let errorMessage = 'Không thể lấy chi tiết danh mục!';
-      if (error.response) {
-        if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data;
-        } else if (error.response.data?.message) {
-          errorMessage = error.response.data.message;
-        }
-        if (error.response.status === 404) {
-          errorMessage = 'Danh mục không tồn tại.';
-        } else if (error.response.status === 500) {
-          errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      toast.error(errorMessage, {
-        position: 'top-right',
-        autoClose: 3000,
-      });
-
-      const elapsedTime = Date.now() - startTime;
-      const remainingTime = 4000 - elapsedTime;
-      setTimeout(() => {
-        setLoading(false);
-      }, remainingTime > 0 ? remainingTime : 0);
+  // Hiển thị thông báo lỗi từ Redux
+  useEffect(() => {
+    if (error) {
+      toast.error(error, { position: 'top-right', autoClose: 3000 });
     }
-  };
+  }, [error]);
 
   // Xử lý xem chi tiết danh mục
   const handleViewDetail = (record) => {
-    fetchCategoryDetail(record.categoryId);
+    dispatch(fetchCategoryDetail(record.categoryId)).then(() => {
+      setIsModalVisible(true);
+    });
   };
 
-  // Đóng modal
+  // Đóng modal chi tiết
   const handleModalClose = () => {
     setIsModalVisible(false);
-    setSelectedCategory(null);
+    dispatch(clearSelectedCategory());
   };
 
-  const handleTableChange = (pagination) => {
-    setCurrentPage(pagination.current);
-    setPageSize(pagination.pageSize);
+  // Mở modal thêm danh mục
+  const handleAddModalOpen = () => {
+    setIsAddModalVisible(true);
+    form.resetFields();
   };
 
+  // Đóng modal thêm danh mục
+  const handleAddModalClose = () => {
+    setIsAddModalVisible(false);
+    form.resetFields();
+  };
+
+  // Mở modal chỉnh sửa danh mục
+  const handleEditModalOpen = (record) => {
+    dispatch(fetchCategoryDetail(record.categoryId)).then((result) => {
+      if (result.meta.requestStatus === 'fulfilled') {
+        editForm.setFieldsValue({
+          categoryName: result.payload.categoryName,
+          description: result.payload.description,
+          status: result.payload.status,
+        });
+        setIsEditModalVisible(true);
+      }
+    });
+  };
+
+  // Đóng modal chỉnh sửa danh mục
+  const handleEditModalClose = () => {
+    setIsEditModalVisible(false);
+    editForm.resetFields();
+    dispatch(clearSelectedCategory());
+  };
+
+  // Xử lý thêm danh mục
+  const onAddFinish = (values) => {
+    dispatch(addCategory(values)).then((result) => {
+      if (result.meta.requestStatus === 'fulfilled') {
+        toast.success('Thêm danh mục thành công!', { position: 'top-right', autoClose: 3000 });
+        handleAddModalClose();
+      }
+    });
+  };
+
+  // Xử lý chỉnh sửa danh mục
+  const onEditFinish = (values) => {
+    dispatch(updateCategory({ categoryId: selectedCategory.categoryId, categoryData: values })).then((result) => {
+      if (result.meta.requestStatus === 'fulfilled') {
+        toast.success('Cập nhật danh mục thành công!', { position: 'top-right', autoClose: 3000 });
+        handleEditModalClose();
+      }
+    });
+  };
+
+  // Xử lý xóa danh mục
   const handleDelete = (categoryId, categoryName) => {
     Modal.confirm({
       title: 'Xác nhận xóa danh mục',
@@ -137,64 +104,30 @@ const Category = () => {
       okText: 'Xóa',
       okType: 'danger',
       cancelText: 'Hủy',
-      onOk: async () => {
-        try {
-          const response = await axios.delete(`http://localhost:8080/api/v1/admin/categories/${categoryId}`);
-          setCategories(categories.filter((category) => category.categoryId !== categoryId));
-          toast.success(response.data || `Xóa danh mục "${categoryName}" thành công!`, {
-            position: 'top-right',
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-          });
-          setCurrentPage(1);
-        } catch (error) {
-          console.error('Lỗi khi xóa danh mục:', error);
-          let errorMessage = 'Xóa danh mục thất bại! Vui lòng thử lại.';
-          
-          if (error.response) {
-            console.log('Error response data:', error.response.data);
-            if (typeof error.response.data === 'string') {
-              errorMessage = error.response.data;
-            } else if (error.response.data?.message) {
-              errorMessage = error.response.data.message;
-            }
-          
-            if (error.response.status === 400) {
-              errorMessage = errorMessage || 'Không thể xóa danh mục do lỗi dữ liệu.';
-            } else if (error.response.status === 404) {
-              errorMessage = 'Danh mục không tồn tại.';
-            } else if (error.response.status === 500) {
-              errorMessage = errorMessage || 'Lỗi server. Vui lòng thử lại sau.';
-            }
+      onOk: () => {
+        dispatch(deleteCategory(categoryId)).then((result) => {
+          if (result.meta.requestStatus === 'fulfilled') {
+            toast.success(`Xóa danh mục "${categoryName}" thành công!`, { position: 'top-right', autoClose: 3000 });
+            dispatch(setCurrentPage(1));
           }
-          
-          toast.error(errorMessage, {
-            position: 'top-right',
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-          });
-        }
-      },
-      onCancel: () => {
-        toast.info('Hủy xóa danh mục.', {
-          position: 'top-right',
-          autoClose: 2000,
         });
       },
+      onCancel: () => {
+        toast.info('Hủy xóa danh mục.', { position: 'top-right', autoClose: 3000 });
+      },
     });
+  };
+
+  // Xử lý khi form không hợp lệ
+  const onFinishFailed = () => {
+    toast.error('Vui lòng kiểm tra lại các trường thông tin!', { position: 'top-right', autoClose: 3000 });
   };
 
   const columns = [
     {
       title: 'STT',
       key: 'index',
-      render: (_, __, index) => startIndex + index + 1,
+      render: (_, __, index) => (currentPage - 1) * pageSize + index + 1,
       width: '10%',
       align: 'center',
     },
@@ -203,7 +136,6 @@ const Category = () => {
       dataIndex: 'categoryName',
       key: 'categoryName',
       sorter: (a, b) => a.categoryName.localeCompare(b.categoryName),
-      className: 'custom-sort-column',
       width: '25%',
       align: 'center',
     },
@@ -237,20 +169,10 @@ const Category = () => {
       render: (_, record) => (
         <Space size="middle">
           <Tooltip title="Xem chi tiết danh mục">
-            <Button
-              type="default"
-              className="viewButton"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewDetail(record)}
-            />
+            <Button type="default" className="viewButton" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)} />
           </Tooltip>
           <Tooltip title="Sửa danh mục">
-            <Button
-              type="default"
-              className="editButton"
-              icon={<EditOutlined />}
-              onClick={() => navigate(`/admin/edit/category/${record.categoryId}`)}
-            />
+            <Button type="default" className="editButton" icon={<EditOutlined />} onClick={() => handleEditModalOpen(record)} />
           </Tooltip>
           <Tooltip title="Xóa danh mục">
             <Button
@@ -269,43 +191,31 @@ const Category = () => {
 
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  const paginatedData = categories.slice(startIndex, endIndex);
+  const paginatedData = filteredCategories.slice(startIndex, endIndex);
 
   return (
     <>
       <style>
         {`
-          /* Hiệu ứng xuất hiện cho hàng trong bảng */
           .table-row {
             opacity: 0;
             transform: translateX(-20px);
             animation: fadeInSlide 0.5s ease forwards;
           }
-
           .table-row:nth-child(1) { animation-delay: 0.1s; }
           .table-row:nth-child(2) { animation-delay: 0.2s; }
           .table-row:nth-child(3) { animation-delay: 0.3s; }
           .table-row:nth-child(4) { animation-delay: 0.4s; }
           .table-row:nth-child(5) { animation-delay: 0.5s; }
           .table-row:nth-child(n + 6) { animation-delay: 0.6s; }
-
           .table-row:hover {
             background-color: #e6f7ff !important;
             transition: background-color 0.3s ease;
           }
-
           @keyframes fadeInSlide {
-            0% {
-              opacity: 0;
-              transform: translateX(-20px);
-            }
-            100% {
-              opacity: 1;
-              transform: translateX(0);
-            }
+            0% { opacity: 0; transform: translateX(-20px); }
+            100% { opacity: 1; transform: translateX(0); }
           }
-
-          /* Style cho bảng */
           .tableContainer {
             background: linear-gradient(135deg, #f9fbff 0%, #e6f0fa 100%);
             border-radius: 8px;
@@ -313,7 +223,6 @@ const Category = () => {
             border: 1px solid #e6f0fa;
             padding: 8px;
           }
-
           .tableContainer .ant-table-thead > tr > th {
             background: #1a73e8;
             color: #fff;
@@ -321,136 +230,55 @@ const Category = () => {
             border-bottom: 2px solid #1557b0;
             text-align: center;
           }
-
           .tableContainer .ant-table-tbody > tr > td {
             border-bottom: 1px solid #e6f0fa;
             text-align: center;
           }
-
           .tableContainer .ant-table-tbody > tr:hover > td {
             background: #e6f7ff;
             transition: background 0.3s ease;
           }
-
-          /* Style cho phân trang */
           .ant-pagination-item {
             border-radius: 4px;
             border: 1px solid #e6f0fa;
           }
-
-          .ant-pagination-item a {
-            color: #1a73e8;
-          }
-
-          .ant-pagination-item:hover {
-            border-color: #1a73e8;
-          }
-
-          .ant-pagination-item:hover a {
-            color: #1557b0;
-          }
-
-          .ant-pagination-item-active {
-            background: #1a73e8;
-            border-color: #1a73e8;
-          }
-
-          .ant-pagination-item-active a {
-            color: #fff;
-          }
-
-          .ant-pagination-prev,
-          .ant-pagination-next {
+          .ant-pagination-item a { color: #1a73e8; }
+          .ant-pagination-item:hover { border-color: #1a73e8; }
+          .ant-pagination-item:hover a { color: #1557b0; }
+          .ant-pagination-item-active { background: #1a73e8; border-color: #1a73e8; }
+          .ant-pagination-item-active a { color: #fff; }
+          .ant-pagination-prev, .ant-pagination-next {
             border-radius: 4px;
             border: 1px solid #e6f0fa;
             color: #1a73e8;
           }
-
-          .ant-pagination-prev:hover,
-          .ant-pagination-next:hover {
+          .ant-pagination-prev:hover, .ant-pagination-next:hover {
             border-color: #1a73e8;
             color: #1557b0;
           }
-
-          /* Style cho Spin (loading) */
-          .ant-spin-dot-item {
-            background-color: #1a73e8;
-          }
-
-          .ant-spin-text {
-            color: #1a73e8;
-            font-weight: 500;
-            margin-top: 10px;
-          }
-
-          /* Style cho nút Xem chi tiết, Sửa và Xóa */
-          .viewButton {
-            background: #f0f2f5;
-            border-color: #595959;
-            color: #595959;
-            transition: all 0.3s ease;
-          }
-
-          .viewButton:hover {
-            background: #595959;
-            color: #fff;
-            border-color: #595959;
-            transform: scale(1.05);
-          }
-
-          .editButton {
-            background: #e6f7ff;
-            border-color: #1a73e8;
-            color: #1a73e8;
-            transition: all 0.3s ease;
-          }
-
-          .editButton:hover {
-            background: #1a73e8;
-            color: #fff;
-            border-color: #1a73e8;
-            transform: scale(1.05);
-          }
-
-          .deleteButton {
-            background: #fff1f0;
-            border-color: #f5222d;
-            color: #f5222d;
-            transition: all 0.3s ease;
-          }
-
-          .deleteButton:hover {
-            background: #f5222d;
-            color: #fff;
-            border-color: #f5222d;
-            transform: scale(1.05);
-          }
-
-          /* Style cho toast */
-          .Toastify__toast--success {
-            background: #e6f7ff !important;
-            color: #1a73e8 !important;
-            font-weight: 500;
-          }
-
-          .Toastify__toast--error {
-            background: #fff1f0 !important;
-            color: #f5222d !important;
-            font-weight: 500;
-          }
-
-          .Toastify__toast--info {
-            background: #f0f2f5 !important;
-            color: #595959 !important;
-            font-weight: 500;
-          }
-
-          /* Style cho bảng khi không có dữ liệu */
-          .ant-table-placeholder {
-            background: #f9fbff;
-            color: #595959;
-            font-style: italic;
-          }
+          .ant-spin-dot-item { background-color: #1a73e8; }
+          .ant-spin-text { color: #1a73e8; font-weight: 500; margin-top: 10px; }
+          .viewButton { background: #f0f2f5; border-color: #595959; color: #595959; transition: all 0.3s ease; }
+          .viewButton:hover { background: #595959; color: #fff; border-color: #595959; transform: scale(1.05); }
+          .editButton { background: #e6f7ff; border-color: #1a73e8; color: #1a73e8; transition: all 0.3s ease; }
+          .editButton:hover { background: #1a73e8; color: #fff; border-color: #1a73e8; transform: scale(1.05); }
+          .deleteButton { background: #fff1f0; border-color: #f5222d; color: #f5222d; transition: all 0.3s ease; }
+          .deleteButton:hover { background: #f5222d; color: #fff; border-color: #f5222d; transform: scale(1.05); }
+          .Toastify__toast--success { background: #e6f7ff !important; color: #1a73e8 !important; font-weight: 500; }
+          .Toastify__toast--error { background: #fff1f0 !important; color: #f5222d !important; font-weight: 500; }
+          .Toastify__toast--info { background: #f0f2f5 !important; color: #595959 !important; font-weight: 500; }
+          .ant-table-placeholder { background: #f9fbff; color: #595959; font-style: italic; }
+          .formContainer { background: #f0f7ff; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+          .ant-form-item-label > label { font-weight: 500; color: #333; }
+          .ant-input, .ant-input-textarea { border-radius: 4px !important; border: 1px solid #d9d9d9 !important; }
+          .ant-input:hover, .ant-input-textarea:hover { border-color: #1a73e8 !important; }
+          .ant-input:focus, .ant-input-textarea:focus { border-color: #1a73e8 !important; box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2) !important; }
+          .submitButton { background: #1a73e8; border-color: #1a73e8; border-radius: 4px; height: 40px; font-weight: 500; transition: all 0.3s ease; }
+          .submitButton:hover { background: #1557b0; border-color: #1557b0; transform: scale(1.05); }
+          .cancelButton { border-radius: 4px; height: 40px; font-weight: 500; transition: all 0.3s ease; }
+          .cancelButton:hover { border-color: #f5222d; color: #f5222d; transform: scale(1.05); }
+          .ant-input-search .ant-input { border-radius: 4px 0 0 4px !important; }
+          .ant-input-search .ant-btn { border-radius: 0 4px 4px 0 !important; }
         `}
       </style>
 
@@ -458,52 +286,48 @@ const Category = () => {
         <Title level={2} style={{ textAlign: 'center', color: '#1a73e8', marginBottom: '30px' }}>
           Danh sách danh mục
         </Title>
-        <Card
-          style={{
-            borderRadius: 8,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-            background: '#fff',
-          }}
-          styles={{ body: { padding: '24px' } }}
-        >
+        <Card style={{ borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', background: '#fff' }}>
           <Spin spinning={loading} tip="Đang tải dữ liệu..." size="large">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Title level={4} style={{ margin: 0, color: '#333' }}>
-                Tổng số danh mục: {categories.length}
+                Tổng số danh mục: {filteredCategories.length}
               </Title>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => navigate('/admin/add/category')}
-                style={{
-                  borderRadius: 4,
-                  backgroundColor: '#1a73e8',
-                  borderColor: '#1a73e8',
-                  height: 40,
-                  fontWeight: 500,
-                }}
-              >
-                Thêm danh mục mới
-              </Button>
+              <Space>
+                <Input.Search
+                  placeholder="Tìm kiếm danh mục"
+                  value={searchText}
+                  onChange={(e) => dispatch(setSearchText(e.target.value))}
+                  onSearch={(value) => dispatch(setSearchText(value))}
+                  style={{ width: 200 }}
+                />
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleAddModalOpen}
+                  style={{ borderRadius: 4, backgroundColor: '#1a73e8', borderColor: '#1a73e8', height: 40, fontWeight: 500 }}
+                >
+                  Thêm danh mục mới
+                </Button>
+              </Space>
             </div>
             <Table
               className="tableContainer"
               columns={columns}
               dataSource={paginatedData}
               rowKey="categoryId"
-              locale={{
-                emptyText: 'Không có dữ liệu danh mục để hiển thị.',
-              }}
               pagination={{
                 current: currentPage,
-                pageSize: pageSize,
-                total: categories.length,
+                pageSize,
+                total: filteredCategories.length,
                 showSizeChanger: true,
                 pageSizeOptions: ['5', '10', '20'],
                 showTotal: (total) => `Tổng ${total} danh mục`,
-                onChange: (page, pageSize) => handleTableChange({ current: page, pageSize }),
+                onChange: (page, pageSize) => {
+                  dispatch(setCurrentPage(page));
+                  dispatch(setPageSize(pageSize));
+                },
               }}
-              style={{ borderRadius: 8 }}
+              locale={{ emptyText: 'Không có dữ liệu danh mục để hiển thị.' }}
               scroll={{ x: 'max-content' }}
               rowClassName={() => 'table-row'}
             />
@@ -515,11 +339,7 @@ const Category = () => {
           title="Chi tiết danh mục"
           open={isModalVisible}
           onCancel={handleModalClose}
-          footer={[
-            <Button key="close" onClick={handleModalClose}>
-              Đóng
-            </Button>,
-          ]}
+          footer={[<Button key="close" onClick={handleModalClose}>Đóng</Button>]}
           width={600}
         >
           {selectedCategory && (
@@ -534,6 +354,93 @@ const Category = () => {
               </Descriptions.Item>
             </Descriptions>
           )}
+        </Modal>
+
+        {/* Modal thêm danh mục mới */}
+        <Modal
+          title="Thêm danh mục mới"
+          open={isAddModalVisible}
+          onCancel={handleAddModalClose}
+          footer={null}
+          width={600}
+        >
+          <Spin spinning={loading} tip="Đang xử lý...">
+            <div className="formContainer">
+              <Form form={form} layout="vertical" onFinish={onAddFinish} onFinishFailed={onFinishFailed}>
+                <Row gutter={16}>
+                  <Col span={24}>
+                    <Form.Item
+                      name="categoryName"
+                      label="Tên danh mục"
+                      rules={[{ required: true, message: 'Vui lòng nhập tên danh mục!' }]}
+                    >
+                      <Input placeholder="Nhập tên danh mục" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Form.Item
+                  name="description"
+                  label="Mô tả"
+                  rules={[{ required: true, message: 'Vui lòng nhập mô tả!' }]}
+                >
+                  <Input.TextArea rows={4} placeholder="Nhập mô tả danh mục" />
+                </Form.Item>
+                <Form.Item style={{ textAlign: 'center' }}>
+                  <Button type="primary" htmlType="submit" className="submitButton" loading={loading} style={{ width: 150 }}>
+                    Thêm danh mục
+                  </Button>
+                  <Button className="cancelButton" style={{ marginLeft: 16, width: 150 }} onClick={handleAddModalClose}>
+                    Hủy
+                  </Button>
+                </Form.Item>
+              </Form>
+            </div>
+          </Spin>
+        </Modal>
+
+        {/* Modal chỉnh sửa danh mục */}
+        <Modal
+          title="Chỉnh sửa danh mục"
+          open={isEditModalVisible}
+          onCancel={handleEditModalClose}
+          footer={null}
+          width={600}
+        >
+          <Spin spinning={loading} tip="Đang xử lý...">
+            <div className="formContainer">
+              <Form form={editForm} layout="vertical" onFinish={onEditFinish} onFinishFailed={onFinishFailed}>
+                <Row gutter={16}>
+                  <Col span={24}>
+                    <Form.Item
+                      name="categoryName"
+                      label="Tên danh mục"
+                      rules={[{ required: true, message: 'Vui lòng nhập tên danh mục!' }]}
+                    >
+                      <Input placeholder="Nhập tên danh mục" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Form.Item
+                  name="description"
+                  label="Mô tả"
+                  rules={[{ required: true, message: 'Vui lòng nhập mô tả!' }]}
+                >
+                  <Input.TextArea rows={4} placeholder="Nhập mô tả danh mục" />
+                </Form.Item>
+                <Form.Item name="status" label="Trạng thái" valuePropName="checked">
+                  <Switch checkedChildren="Hoạt động" unCheckedChildren="Không hoạt động" defaultChecked />
+                </Form.Item>
+                <Form.Item style={{ textAlign: 'center' }}>
+                  <Button type="primary" htmlType="submit" className="submitButton" loading={loading} style={{ width: 150 }}>
+                    Cập nhật danh mục
+                  </Button>
+                  <Button className="cancelButton" style={{ marginLeft: 16, width: 150 }} onClick={handleEditModalClose}>
+                    Hủy
+                  </Button>
+                </Form.Item>
+              </Form>
+            </div>
+          </Spin>
         </Modal>
       </div>
     </>

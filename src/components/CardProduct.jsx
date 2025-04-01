@@ -1,27 +1,31 @@
-import React from 'react'
-import { Card } from 'react-bootstrap'; 
-import { NavLink } from 'react-router-dom';
+// src/components/CardProduct.jsx
+import React from 'react';
+import { Card, Button } from 'react-bootstrap';
+import '../styles/CardProduct.scss';
 
-function CardProduct({ product }) {
+const CardProduct = ({ product, onViewDetail }) => {
   return (
-    <>
-    <Card style={{ width: '18rem' }} >
-      <Card.Img 
-        variant="top" 
-        src={product.image} 
+    <Card className="mb-4 shadow-sm">
+      <Card.Img
+        variant="top"
+        src={product.image || 'https://picsum.photos/300?random=1'}
+        alt={product.productName}
+        onError={(e) => (e.target.src = 'https://picsum.photos/300?random=1')} 
       />
       <Card.Body>
-        <Card.Title>Tên sản phẩm: {product.productName}</Card.Title>
-        <Card.Text>Mô Tả sản phẩm: {product.description}
+        <Card.Title className="text-center">{product.productName || 'Không có tên'}</Card.Title>
+        <Card.Text className="text-center">
+          {product.description || 'Không có mô tả'}
         </Card.Text>
-                <Card.Title>Giá sản phẩm: {product.unitPrice}</Card.Title>
-
-        <NavLink className="btn btn-primary" to={`/product-detail/${product.productId}`} >Xem chi tiết</NavLink>
+        <Card.Text className="text-center text-danger">
+          {product.unitPrice != null ? product.unitPrice.toLocaleString('vi-VN') : 'Liên hệ'} VNĐ
+        </Card.Text>
+        <Button variant="primary" className="w-100" onClick={() => onViewDetail(product.productId)}>
+          Xem chi tiết
+        </Button>
       </Card.Body>
     </Card>
+  );
+};
 
-    </>
-  )
-}
-
-export default CardProduct
+export default CardProduct;
