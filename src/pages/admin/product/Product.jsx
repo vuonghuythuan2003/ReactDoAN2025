@@ -89,8 +89,8 @@ const Product = () => {
           unitPrice: productData.unitPrice,
           stockQuantity: productData.stockQuantity,
           soldQuantity: productData.soldQuantity || 0,
-          categoryId: productData.categoryId,
-          brandId: productData.brandId,
+          categoryId: String(productData.categoryId), // Chuyển thành chuỗi
+          brandId: String(productData.brandId), // Chuyển thành chuỗi
         });
         setInitialImage(productData.image || null);
         setEditFileList([]);
@@ -145,12 +145,19 @@ const Product = () => {
   };
 
   const onEditFinish = (values) => {
-    const productData = { ...values, image: editFileList };
+    const productData = {
+      ...values,
+      categoryId: String(values.categoryId), // Chuyển thành chuỗi
+      brandId: String(values.brandId), // Chuyển thành chuỗi
+      image: editFileList.length > 0 ? editFileList : null, // Chỉ gửi file nếu có file mới
+    };
     dispatch(updateProduct({ productId: selectedProduct.productId, productData })).then((result) => {
       if (result.meta.requestStatus === 'fulfilled') {
         toast.success('Cập nhật sản phẩm thành công!', { position: 'top-right', autoClose: 3000 });
         handleEditModalClose();
         dispatch(fetchProducts({ page: currentPage, size: pageSize }));
+      } else {
+        toast.error('Cập nhật sản phẩm thất bại!', { position: 'top-right', autoClose: 3000 });
       }
     });
   };

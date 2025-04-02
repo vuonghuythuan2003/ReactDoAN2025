@@ -1,19 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Form, Input, Button, Typography, ConfigProvider } from 'antd';
+import { Form, Input, Button, Typography, ConfigProvider, Spin } from 'antd';
 import { UserOutlined, MailOutlined, LockOutlined, PhoneOutlined, HomeOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import { BASE_URL } from '../api/index'; // Sử dụng BASE_URL từ index.jsx
 
 const { Title, Text } = Typography;
 
 function Register() {
   const [form] = Form.useForm();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false); // Trạng thái loading khi gửi yêu cầu
 
   const onFinish = async (values) => {
+    setLoading(true); // Bật trạng thái loading
     try {
-      const response = await axios.post('http://localhost:8080/api/v1/auth/sign-up', values);
+      await BASE_URL.post('/auth/sign-up', values); // Sử dụng BASE_URL thay vì axios
       toast.success('Đăng ký thành công!', { position: 'top-right', autoClose: 3000 });
       navigate('/login'); // Chuyển hướng đến trang đăng nhập sau khi đăng ký thành công
     } catch (error) {
@@ -25,6 +27,8 @@ function Register() {
       } else {
         toast.error('Lỗi kết nối: ' + error.message, { position: 'top-right', autoClose: 3000 });
       }
+    } finally {
+      setLoading(false); // Tắt trạng thái loading
     }
   };
 
@@ -213,13 +217,15 @@ function Register() {
                 htmlType="submit"
                 block
                 size="large"
+                loading={loading} // Hiển thị trạng thái loading trên nút
+                disabled={loading} // Vô hiệu hóa nút khi đang loading
                 style={{
                   height: 40,
                   fontSize: 16,
                   fontWeight: 500,
                 }}
               >
-                Đăng Ký Ngay
+                {loading ? 'Đang xử lý...' : 'Đăng Ký Ngay'}
               </Button>
             </Form.Item>
 
@@ -246,4 +252,5 @@ function Register() {
     </ConfigProvider>
   );
 }
+
 export default Register;

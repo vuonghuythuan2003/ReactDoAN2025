@@ -59,17 +59,16 @@ export const addProduct = createAsyncThunk(
   }
 );
 
-// Action bất đồng bộ để cập nhật sản phẩm
 export const updateProduct = createAsyncThunk(
   'products/updateProduct',
   async ({ productId, productData }, { rejectWithValue }) => {
     try {
       const formData = new FormData();
       Object.keys(productData).forEach((key) => {
-        if (key === 'image' && productData[key]?.[0]?.originFileObj) {
-          formData.append(key, productData[key][0].originFileObj);
-        } else {
-          formData.append(key, productData[key]);
+        if (key === 'image' && productData[key]?.length > 0 && productData[key][0]?.originFileObj) {
+          formData.append(key, productData[key][0].originFileObj); // Gửi file gốc
+        } else if (productData[key] !== null && productData[key] !== undefined) {
+          formData.append(key, productData[key]); // Gửi các trường khác
         }
       });
       const response = await BASE_URL_ADMIN.put(`/products/${productId}`, formData, {
@@ -79,7 +78,7 @@ export const updateProduct = createAsyncThunk(
       });
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data || { message: 'Cập nhật sản phẩm thất bại!' });
+      return rejectWithValue(error.response?.data?.message || 'Cập nhật sản phẩm thất bại!');
     }
   }
 );

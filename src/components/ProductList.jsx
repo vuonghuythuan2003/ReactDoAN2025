@@ -9,7 +9,7 @@ const ProductList = ({ products, onViewDetail }) => {
         <Row>
           {products.length > 0 ? (
             products.map((item) => (
-              <Col lg={4} md={6} sm={12} key={item.productId} className="mb-4">
+              <Col lg={3} md={6} sm={12} key={item.productId} className="mb-4">
                 <CardProduct product={item} onViewDetail={onViewDetail} />
               </Col>
             ))
