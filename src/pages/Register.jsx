@@ -246,5 +246,4 @@ function Register() {
     </ConfigProvider>
   );
 }
-<></>
 export default Register;
