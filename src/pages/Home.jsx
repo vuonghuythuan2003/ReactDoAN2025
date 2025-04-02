@@ -1,14 +1,20 @@
 import React, { useEffect, useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { BASE_URL } from '../api/index';
 import { Input, Spin } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import Banner from '../components/Banner';
 import ProductList from '../components/ProductList';
 import ProductModal from '../components/ProductModal';
 import '../styles/Home.scss';
 
 const Home = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
   const [products, setProducts] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [newProducts, setNewProducts] = useState([]);
@@ -80,6 +86,7 @@ const Home = () => {
       setBestSellerProducts(bestSellerResponse.data.content || bestSellerResponse.data);
     } catch (error) {
       console.error('Lỗi khi lấy dữ liệu:', error);
+      toast.error('Không thể tải dữ liệu sản phẩm!', { position: 'top-right', autoClose: 3000 });
     } finally {
       setLoading(false);
     }
@@ -92,6 +99,7 @@ const Home = () => {
       setShowModal(true);
     } catch (error) {
       console.error('Lỗi khi lấy chi tiết sản phẩm:', error);
+      toast.error('Không thể tải chi tiết sản phẩm!', { position: 'top-right', autoClose: 3000 });
     }
   };
 
@@ -110,19 +118,38 @@ const Home = () => {
       setProducts(response.data.content || response.data);
     } catch (error) {
       console.error('Lỗi khi tìm kiếm sản phẩm:', error);
+      toast.error('Không thể tìm kiếm sản phẩm!', { position: 'top-right', autoClose: 3000 });
     } finally {
       setIsSearching(false);
     }
   };
 
+  const handleAddToCart = async (productId) => {
+    if (!isAuthenticated) {
+      toast.warning('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!', { position: 'top-right', autoClose: 3000 });
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const userId = user?.userId;
+      if (!userId) {
+        throw new Error('Không tìm thấy thông tin người dùng!');
+      }
+
+      const requestDTO = { productId, quantity: 1 };
+      const response = await BASE_URL.post(`/user/cart/add?userId=${userId}`, requestDTO);
+      toast.success('Đã thêm sản phẩm vào giỏ hàng!', { position: 'top-right', autoClose: 3000 });
+    } catch (error) {
+      console.error('Lỗi khi thêm vào giỏ hàng:', error);
+      toast.error('Không thể thêm sản phẩm vào giỏ hàng!', { position: 'top-right', autoClose: 3000 });
+    }
+  };
+
   return (
     <div className="home-container">
-      {loading ? (
-        <div className="loading-container">
-          <Spin size="large" tip="Đang tải dữ liệu..." />
-        </div>
-      ) : (
-        <>
+      <Spin spinning={loading} tip="Đang tải dữ liệu..." size="large">
+        <div style={{ minHeight: '100vh' }}>
           <div className="banner-container">
             <Banner />
           </div>
@@ -195,14 +222,15 @@ const Home = () => {
               </div>
             </div>
           )}
+        </div>
+      </Spin>
 
-          <ProductModal
-            showModal={showModal}
-            handleCloseModal={handleCloseModal}
-            selectedProduct={selectedProduct}
-          />
-        </>
-      )}
+      <ProductModal
+        showModal={showModal}
+        handleCloseModal={handleCloseModal}
+        selectedProduct={selectedProduct}
+        onAddToCart={handleAddToCart}
+      />
     </div>
   );
 };

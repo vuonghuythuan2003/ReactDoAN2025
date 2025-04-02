@@ -1,8 +1,7 @@
-// src/components/ProductModal.jsx
 import React from 'react';
 import { Modal, Button, Row, Col } from 'react-bootstrap';
 
-const ProductModal = ({ showModal, handleCloseModal, selectedProduct }) => {
+const ProductModal = ({ showModal, handleCloseModal, selectedProduct, onAddToCart }) => {
   return (
     <Modal show={showModal} onHide={handleCloseModal} size="lg">
       <Modal.Header closeButton>
@@ -16,7 +15,7 @@ const ProductModal = ({ showModal, handleCloseModal, selectedProduct }) => {
                 src={selectedProduct.image || 'https://picsum.photos/400?random=5'}
                 alt={selectedProduct.productName}
                 className="modal-img"
-                onError={(e) => (e.target.src = 'https://picsum.photos/400?random=5')} 
+                onError={(e) => (e.target.src = 'https://picsum.photos/400?random=5')}
               />
             </Col>
             <Col md={6}>
@@ -27,7 +26,12 @@ const ProductModal = ({ showModal, handleCloseModal, selectedProduct }) => {
               <p>
                 <strong>Mô tả:</strong> {selectedProduct.description || 'Không có mô tả'}
               </p>
-              <Button variant="primary">Thêm vào giỏ hàng</Button>
+              <Button
+                variant="primary"
+                onClick={() => onAddToCart(selectedProduct.productId)}
+              >
+                Thêm vào giỏ hàng
+              </Button>
             </Col>
           </Row>
         ) : (

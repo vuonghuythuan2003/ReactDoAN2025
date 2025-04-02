@@ -8,6 +8,7 @@ import dashboardReducer from '../reducers/DashboardSlice.js';
 import layoutReducer from '../reducers/LayoutSlice.js';
 import authReducer from '../reducers/AuthSlice';
 import commentReducer from '../reducers/CommentSlice'; 
+
 export const store = configureStore({
   reducer: {
     brands: brandReducer,
