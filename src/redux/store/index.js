@@ -6,7 +6,8 @@ import orderReducer from '../reducers/OrderSlice.js';
 import userReducer from '../reducers/UserSlice.js';
 import dashboardReducer from '../reducers/DashboardSlice.js';
 import layoutReducer from '../reducers/LayoutSlice.js';
-
+import authReducer from '../reducers/AuthSlice';
+import commentReducer from '../reducers/CommentSlice'; 
 export const store = configureStore({
   reducer: {
     brands: brandReducer,
@@ -16,5 +17,7 @@ export const store = configureStore({
     users: userReducer,
     dashboard: dashboardReducer,
     layout: layoutReducer,
+    auth: authReducer,
+    comments: commentReducer,
   },
 });

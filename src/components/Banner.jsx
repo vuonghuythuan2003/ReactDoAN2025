@@ -34,9 +34,10 @@ const Banner = () => {
   ];
 
   return (
-    <Carousel className="banner-carousel">
+    <Carousel fade interval={5000} pause="hover" className="banner-carousel">
       {banners.map((banner) => (
         <Carousel.Item key={banner.id}>
+          <div className="banner-overlay" />
           <img
             className="d-block w-100 banner-image"
             src={banner.image}

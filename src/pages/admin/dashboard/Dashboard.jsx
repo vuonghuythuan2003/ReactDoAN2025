@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'; // Chỉ import các hook cần thiết
 import { Card, Col, Row, Typography, Spin, Table, DatePicker, ConfigProvider, theme } from 'antd';
 import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
-import axios from 'axios';
 import { toast } from 'react-toastify';
 import moment from 'moment';
 import { useOutletContext } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchDashboardData, setDateRange } from '../../../redux/reducers/DashboardSlice';
 import 'antd/dist/reset.css';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -14,152 +15,73 @@ const { useToken } = theme;
 
 const Dashboard = () => {
   const { isDarkMode } = useOutletContext();
-  const [loading, setLoading] = useState(true);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [newUsersThisMonth, setNewUsersThisMonth] = useState([]);
-  const [topSpendingCustomers, setTopSpendingCustomers] = useState([]);
-  const [trafficData, setTrafficData] = useState([]);
-  const [browserStats, setBrowserStats] = useState([]);
-  const [revenueData, setRevenueData] = useState([]); 
+  const dispatch = useDispatch();
+  const {
+    totalUsers,
+    newUsersThisMonth,
+    topSpendingCustomers,
+    revenueData,
+    bestSellerProducts,
+    mostLikedProducts,
+    totalInvoices,
+    trafficData,
+    browserStats,
+    loading,
+    error,
+    from,
+    to,
+  } = useSelector((state) => state.dashboard);
 
-  const defaultFrom = moment('2025-02-01T00:00:00').toDate();
-  const defaultTo = moment('2025-02-27T23:59:59').toDate();
-  const [dateRange, setDateRange] = useState([moment(defaultFrom), moment(defaultTo)]);
-  const [from, setFrom] = useState(defaultFrom.toISOString());
-  const [to, setTo] = useState(defaultTo.toISOString());
+  const defaultFrom = moment('2025-02-01T00:00:00');
+  const defaultTo = moment('2025-02-27T23:59:59');
+  const [dateRange, setLocalDateRange] = useState([defaultFrom, defaultTo]);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const onDateRangeChange = (dates) => {
     if (dates) {
-      setDateRange(dates);
-      setFrom(dates[0].toDate().toISOString());
-      setTo(dates[1].toDate().toISOString());
+      setLocalDateRange(dates);
+      const newFrom = dates[0].toDate().toISOString();
+      const newTo = dates[1].toDate().toISOString();
+      dispatch(setDateRange({ from: newFrom, to: newTo }));
     }
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+    const fetchInitialData = async () => {
       try {
-        const userResponse = await axios.get('http://localhost:8080/api/v1/admin/users', {
-          params: {
-            page: 0,
-            size: 1,
-            sortBy: 'createdAt',
-            direction: 'desc',
-          },
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        setTotalUsers(userResponse.data.totalElements || 0);
-
-        // Fetch new users this month
-        const newUsersThisMonthResponse = await axios.get('http://localhost:8080/api/v1/admin/new-accounts-this-month', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        setNewUsersThisMonth(newUsersThisMonthResponse.data || []);
-
-        // Fetch top spending customers
-        const topSpendingCustomersResponse = await axios.get('http://localhost:8080/api/v1/admin/reports/top-spending-customers', {
-          params: {
-            from,
-            to,
-          },
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        console.log('Top Spending Customers Response:', topSpendingCustomersResponse.data);
-        setTopSpendingCustomers(topSpendingCustomersResponse.data || []);
-
-        // Fetch revenue by category
-        const revenueResponse = await axios.get('http://localhost:8080/api/v1/admin/reports/revenue-by-category', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        setRevenueData(revenueResponse.data || []);
-
-        // Mock data for traffic types (pie chart)
-        const mockTrafficData = [
-          { name: 'Organic', value: 44.46, visits: 356 },
-          { name: 'Referral', value: 5.54, visits: 36 },
-          { name: 'Other', value: 50, visits: 245 },
-        ];
-        setTrafficData(mockTrafficData);
-
-        // Mock data for browser stats (bar chart)
-        const mockBrowserStats = [
-          { name: 'Google Chrome', value: 50 },
-          { name: 'Mozilla Firefox', value: 30 },
-          { name: 'Internet Explorer', value: 10 },
-          { name: 'Safari', value: 10 },
-        ];
-        setBrowserStats(mockBrowserStats);
-
-        setLoading(false);
+        await dispatch(fetchDashboardData({ from, to }));
       } catch (error) {
-        console.error('Lỗi khi lấy dữ liệu:', error);
-        let errorMessage = 'Không thể lấy dữ liệu!';
-        if (error.response) {
-          if (typeof error.response.data === 'string') {
-            errorMessage = error.response.data;
-          } else if (error.response.data?.message) {
-            errorMessage = error.response.data.message;
-          }
-          if (error.response.status === 400) {
-            errorMessage = errorMessage || 'Yêu cầu không hợp lệ.';
-          } else if (error.response.status === 500) {
-            errorMessage = errorMessage || 'Lỗi server. Vui lòng thử lại sau.';
-          }
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-        toast.error(errorMessage, {
-          position: 'top-right',
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
-        setLoading(false);
+        console.error('Error fetching dashboard data:', error);
+        toast.error('Không thể tải dữ liệu dashboard!', { position: 'top-right', autoClose: 3000 });
+      } finally {
+        setTimeout(() => {
+          setInitialLoading(false);
+        }, 3000);
       }
     };
+    fetchInitialData();
+  }, [dispatch, from, to]);
 
-    fetchData();
-  }, [from, to]);
+  useEffect(() => {
+    if (error) {
+      toast.error(error, {
+        position: 'top-right',
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+    }
+  }, [error]);
 
-  // Colors for the pie chart
   const COLORS = ['#1890ff', '#52c41a', '#fadb14', '#ff4d4f', '#fa8c16'];
 
-  // Mock growth rate (since we don't have new users last month)
-  const growthRate = newUsersThisMonth.length > 0 ? 46.43 : 0;
-
-  // Table columns for new accounts this month
-  const columns = [
-    {
-      title: 'Họ và Tên',
-      dataIndex: 'fullname',
-      key: 'fullname',
-    },
-    {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
-    },
-    {
-      title: 'Số Điện Thoại',
-      dataIndex: 'phone',
-      key: 'phone',
-    },
-    {
-      title: 'Địa Chỉ',
-      dataIndex: 'address',
-      key: 'address',
-    },
+  const newUsersColumns = [
+    { title: 'Họ và Tên', dataIndex: 'fullname', key: 'fullname' },
+    { title: 'Email', dataIndex: 'email', key: 'email' },
+    { title: 'Số Điện Thoại', dataIndex: 'phone', key: 'phone' },
+    { title: 'Địa Chỉ', dataIndex: 'address', key: 'address' },
     {
       title: 'Ngày Tạo',
       dataIndex: 'createdAt',
@@ -170,37 +92,42 @@ const Dashboard = () => {
       title: 'Vai Trò',
       dataIndex: 'roles',
       key: 'roles',
-      render: (roles) => roles.map(role => role.roleName).join(', '),
+      render: (roles) => roles.map((role) => role.roleName).join(', '),
     },
   ];
 
-  // Custom component to access theme tokens
+  const bestSellerColumns = [
+    { title: 'Tên Sản Phẩm', dataIndex: 'productName', key: 'productName' },
+    { title: 'Số Lượng Bán', dataIndex: 'totalQuantitySold', key: 'totalQuantitySold' },
+    {
+      title: 'Doanh Thu',
+      dataIndex: 'totalRevenue',
+      key: 'totalRevenue',
+      render: (text) => text.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }),
+    },
+  ];
+
+  const mostLikedColumns = [
+    { title: 'Tên Sản Phẩm', dataIndex: 'productName', key: 'productName' },
+    { title: 'Số Lượt Thích', dataIndex: 'likeCount', key: 'likeCount' },
+  ];
+
   const CustomComponent = () => {
     const { token } = useToken();
     return (
-      <div
-        style={{
-          padding: token.paddingLG,
-          background: isDarkMode ? token.colorBgBase : '#141414',
-        }}
-      >
-        <Spin spinning={loading} tip="Đang tải dữ liệu..." size="large">
-          {/* Date Range Picker */}
+      <div style={{ padding: token.paddingLG, background: isDarkMode ? token.colorBgBase : '#f0f2f5' }}>
+        <Spin spinning={initialLoading || loading} tip="Đang tải dữ liệu..." size="large">
           <Row style={{ marginBottom: token.marginLG }}>
             <Col>
               <RangePicker
                 value={dateRange}
                 onChange={onDateRangeChange}
                 format="DD/MM/YYYY"
-                style={{
-                  borderRadius: token.borderRadiusLG,
-                  boxShadow: token.boxShadowTertiary,
-                }}
+                style={{ borderRadius: token.borderRadiusLG, boxShadow: token.boxShadowTertiary }}
               />
             </Col>
           </Row>
 
-          {/* Top Metrics */}
           <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
             <Col xs={24} sm={12} md={4}>
               <Card
@@ -222,23 +149,6 @@ const Dashboard = () => {
             <Col xs={24} sm={12} md={4}>
               <Card
                 style={{
-                  background: '#fadb14',
-                  border: 'none',
-                  borderRadius: token.borderRadiusLG,
-                  boxShadow: token.boxShadow,
-                  textAlign: 'center',
-                }}
-                hoverable
-              >
-                <Title level={3} style={{ color: '#fff', margin: 0 }}>
-                  46.41%
-                </Title>
-                <p style={{ margin: 0, fontSize: 16, color: '#fff' }}>Tỷ lệ thoát (Mock)</p>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} md={4}>
-              <Card
-                style={{
                   background: '#52c41a',
                   border: 'none',
                   borderRadius: token.borderRadiusLG,
@@ -248,9 +158,9 @@ const Dashboard = () => {
                 hoverable
               >
                 <Title level={3} style={{ color: '#fff', margin: 0 }}>
-                  4,054,876
+                  {newUsersThisMonth.length.toLocaleString()}
                 </Title>
-                <p style={{ margin: 0, fontSize: 16, color: '#fff' }}>Lượt xem trang (Mock)</p>
+                <p style={{ margin: 0, fontSize: 16, color: '#fff' }}>Người dùng mới (Tháng này)</p>
               </Card>
             </Col>
             <Col xs={24} sm={12} md={4}>
@@ -265,76 +175,52 @@ const Dashboard = () => {
                 hoverable
               >
                 <Title level={3} style={{ color: '#fff', margin: 0 }}>
-                  {growthRate}%
+                  {totalInvoices.toLocaleString()}
                 </Title>
-                <p style={{ margin: 0, fontSize: 16, color: '#fff' }}>Tỷ lệ tăng trưởng (Mock)</p>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} md={4}>
-              <Card
-                style={{
-                  background: '#fa8c16',
-                  border: 'none',
-                  borderRadius: token.borderRadiusLG,
-                  boxShadow: token.boxShadow,
-                  textAlign: 'center',
-                }}
-                hoverable
-              >
-                <Title level={3} style={{ color: '#fff', margin: 0 }}>
-                  {newUsersThisMonth.length.toLocaleString()}
-                </Title>
-                <p style={{ margin: 0, fontSize: 16, color: '#fff' }}>Người dùng mới (Tháng này)</p>
+                <p style={{ margin: 0, fontSize: 16, color: '#fff' }}>Tổng số hóa đơn</p>
               </Card>
             </Col>
           </Row>
 
-          {/* New Accounts This Month (Table) */}
           <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
             <Col xs={24}>
               <Card
-                title="Danh sách tài khoản mới trong tháng"
-                style={{
-                  borderRadius: token.borderRadiusLG,
-                  boxShadow: token.boxShadow,
-                }}
-                headStyle={{
-                  background: isDarkMode ? '#1f1f1f' : '#1a73e8',
-                  color: '#fff',
-                  borderTopLeftRadius: token.borderRadiusLG,
-                  borderTopRightRadius: token.borderRadiusLG,
+                title="Tài khoản mới trong tháng"
+                style={{ borderRadius: token.borderRadiusLG, boxShadow: token.boxShadow }}
+                styles={{
+                  header: {
+                    background: isDarkMode ? '#1f1f1f' : '#1a73e8',
+                    color: '#fff',
+                    borderTopLeftRadius: token.borderRadiusLG,
+                    borderTopRightRadius: token.borderRadiusLG,
+                  },
                 }}
                 hoverable
               >
                 <Table
                   dataSource={newUsersThisMonth}
-                  columns={columns}
+                  columns={newUsersColumns}
                   rowKey="id"
                   pagination={{ pageSize: 5 }}
                   bordered
-                  style={{
-                    borderRadius: token.borderRadiusLG,
-                    overflow: 'hidden',
-                  }}
+                  style={{ borderRadius: token.borderRadiusLG, overflow: 'hidden' }}
                 />
               </Card>
             </Col>
           </Row>
 
-          {/* Top Spending Customers */}
           <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
             <Col xs={24}>
               <Card
                 title="Top 10 khách hàng chi tiêu cao nhất"
-                style={{
-                  borderRadius: token.borderRadiusLG,
-                  boxShadow: token.boxShadow,
-                }}
-                headStyle={{
-                  background: isDarkMode ? '#1f1f1f' : '#1a73e8',
-                  color: '#fff',
-                  borderTopLeftRadius: token.borderRadiusLG,
-                  borderTopRightRadius: token.borderRadiusLG,
+                style={{ borderRadius: token.borderRadiusLG, boxShadow: token.boxShadow }}
+                styles={{
+                  header: {
+                    background: isDarkMode ? '#1f1f1f' : '#1a73e8',
+                    color: '#fff',
+                    borderTopLeftRadius: token.borderRadiusLG,
+                    borderTopRightRadius: token.borderRadiusLG,
+                  },
                 }}
                 hoverable
               >
@@ -344,7 +230,10 @@ const Dashboard = () => {
                       <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#444' : '#d9d9d9'} />
                       <XAxis dataKey="fullName" stroke={isDarkMode ? '#e6e6e6' : '#000'} />
                       <YAxis stroke={isDarkMode ? '#e6e6e6' : '#000'} />
-                      <Tooltip formatter={(value) => `$${value.toLocaleString()}`} contentStyle={{ backgroundColor: isDarkMode ? '#2f2f2f' : '#fff', color: isDarkMode ? '#e6e6e6' : '#000' }} />
+                      <Tooltip
+                        formatter={(value) => `${value.toLocaleString('vi-VN')} VNĐ`}
+                        contentStyle={{ backgroundColor: isDarkMode ? '#2f2f2f' : '#fff', color: isDarkMode ? '#e6e6e6' : '#000' }}
+                      />
                       <Bar dataKey="totalSpent" fill="#52c41a" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -355,20 +244,107 @@ const Dashboard = () => {
             </Col>
           </Row>
 
-          {/* Visit by Traffic Types and Browser Stats */}
+          <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
+            <Col xs={24}>
+              <Card
+                title="Sản phẩm bán chạy nhất"
+                style={{ borderRadius: token.borderRadiusLG, boxShadow: token.boxShadow }}
+                styles={{
+                  header: {
+                    background: isDarkMode ? '#1f1f1f' : '#1a73e8',
+                    color: '#fff',
+                    borderTopLeftRadius: token.borderRadiusLG,
+                    borderTopRightRadius: token.borderRadiusLG,
+                  },
+                }}
+                hoverable
+              >
+                <Table
+                  dataSource={bestSellerProducts}
+                  columns={bestSellerColumns}
+                  rowKey="productId"
+                  pagination={{ pageSize: 5 }}
+                  bordered
+                  style={{ borderRadius: token.borderRadiusLG, overflow: 'hidden' }}
+                />
+              </Card>
+            </Col>
+          </Row>
+
+          <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
+            <Col xs={24}>
+              <Card
+                title="Sản phẩm được yêu thích nhất"
+                style={{ borderRadius: token.borderRadiusLG, boxShadow: token.boxShadow }}
+                styles={{
+                  header: {
+                    background: isDarkMode ? '#1f1f1f' : '#1a73e8',
+                    color: '#fff',
+                    borderTopLeftRadius: token.borderRadiusLG,
+                    borderTopRightRadius: token.borderRadiusLG,
+                  },
+                }}
+                hoverable
+              >
+                <Table
+                  dataSource={mostLikedProducts}
+                  columns={mostLikedColumns}
+                  rowKey="productId"
+                  pagination={{ pageSize: 5 }}
+                  bordered
+                  style={{ borderRadius: token.borderRadiusLG, overflow: 'hidden' }}
+                />
+              </Card>
+            </Col>
+          </Row>
+
+          <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
+            <Col xs={24}>
+              <Card
+                title="Doanh thu theo danh mục"
+                style={{ borderRadius: token.borderRadiusLG, boxShadow: token.boxShadow }}
+                styles={{
+                  header: {
+                    background: isDarkMode ? '#1f1f1f' : '#1a73e8',
+                    color: '#fff',
+                    borderTopLeftRadius: token.borderRadiusLG,
+                    borderTopRightRadius: token.borderRadiusLG,
+                  },
+                }}
+                hoverable
+              >
+                {revenueData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={revenueData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#444' : '#d9d9d9'} />
+                      <XAxis dataKey="categoryName" stroke={isDarkMode ? '#e6e6e6' : '#000'} />
+                      <YAxis stroke={isDarkMode ? '#e6e6e6' : '#000'} />
+                      <Tooltip
+                        formatter={(value) => `${value.toLocaleString('vi-VN')} VNĐ`}
+                        contentStyle={{ backgroundColor: isDarkMode ? '#2f2f2f' : '#fff', color: isDarkMode ? '#e6e6e6' : '#000' }}
+                      />
+                      <Bar dataKey="totalRevenue" fill="#fa8c16" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p>Không có dữ liệu để hiển thị</p>
+                )}
+              </Card>
+            </Col>
+          </Row>
+
           <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
             <Col xs={24} md={12}>
               <Card
                 title="Lượt truy cập theo loại lưu lượng (Mock)"
-                style={{
-                  borderRadius: token.borderRadiusLG,
-                  boxShadow: token.boxShadow,
-                }}
-                headStyle={{
-                  background: isDarkMode ? '#1f1f1f' : '#1a73e8',
-                  color: '#fff',
-                  borderTopLeftRadius: token.borderRadiusLG,
-                  borderTopRightRadius: token.borderRadiusLG,
+                style={{ borderRadius: token.borderRadiusLG, boxShadow: token.boxShadow }}
+                styles={{
+                  header: {
+                    background: isDarkMode ? '#1f1f1f' : '#1a73e8',
+                    color: '#fff',
+                    borderTopLeftRadius: token.borderRadiusLG,
+                    borderTopRightRadius: token.borderRadiusLG,
+                  },
                 }}
                 hoverable
               >
@@ -396,15 +372,14 @@ const Dashboard = () => {
             <Col xs={24} md={12}>
               <Card
                 title="Thống kê trình duyệt (Mock)"
-                style={{
-                  borderRadius: token.borderRadiusLG,
-                  boxShadow: token.boxShadow,
-                }}
-                headStyle={{
-                  background: isDarkMode ? '#1f1f1f' : '#1a73e8',
-                  color: '#fff',
-                  borderTopLeftRadius: token.borderRadiusLG,
-                  borderTopRightRadius: token.borderRadiusLG,
+                style={{ borderRadius: token.borderRadiusLG, boxShadow: token.boxShadow }}
+                styles={{
+                  header: {
+                    background: isDarkMode ? '#1f1f1f' : '#1a73e8',
+                    color: '#fff',
+                    borderTopLeftRadius: token.borderRadiusLG,
+                    borderTopRightRadius: token.borderRadiusLG,
+                  },
                 }}
                 hoverable
               >
@@ -417,43 +392,6 @@ const Dashboard = () => {
                     <Bar dataKey="value" fill="#1890ff" />
                   </BarChart>
                 </ResponsiveContainer>
-              </Card>
-            </Col>
-          </Row>
-
-          {/* Revenue by Category */}
-          <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
-            <Col xs={24}>
-              <Card
-                title="Doanh thu theo danh mục"
-                style={{
-                  borderRadius: token.borderRadiusLG,
-                  boxShadow: token.boxShadow,
-                }}
-                headStyle={{
-                  background: isDarkMode ? '#1f1f1f' : '#1a73e8',
-                  color: '#fff',
-                  borderTopLeftRadius: token.borderRadiusLG,
-                  borderTopRightRadius: token.borderRadiusLG,
-                }}
-                hoverable
-              >
-                {revenueData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={revenueData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#444' : '#d9d9d9'} />
-                      <XAxis dataKey="categoryName" stroke={isDarkMode ? '#e6e6e6' : '#000'} />
-                      <YAxis stroke={isDarkMode ? '#e6e6e6' : '#000'} />
-                      <Tooltip
-                        formatter={(value) => `${value.toLocaleString('vi-VN')} VNĐ`}
-                        contentStyle={{ backgroundColor: isDarkMode ? '#2f2f2f' : '#fff', color: isDarkMode ? '#e6e6e6' : '#000' }}
-                      />
-                      <Bar dataKey="totalRevenue" fill="#fa8c16" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p>Không có dữ liệu để hiển thị</p>
-                )}
               </Card>
             </Col>
           </Row>
@@ -475,16 +413,8 @@ const Dashboard = () => {
           colorText: isDarkMode ? '#e6e6e6' : '#000000',
         },
         components: {
-          Card: {
-            headerBg: isDarkMode ? '#1f1f1f' : '#1a73e8',
-            headerFontSize: 18,
-            headerHeight: 48,
-          },
-          Table: {
-            headerBg: isDarkMode ? '#1f1f1f' : '#1a73e8',
-            headerColor: '#fff',
-            rowHoverBg: isDarkMode ? '#434343' : '#e6f7ff',
-          },
+          Card: { headerBg: isDarkMode ? '#1f1f1f' : '#1a73e8', headerFontSize: 18, headerHeight: 48 },
+          Table: { headerBg: isDarkMode ? '#1f1f1f' : '#1a73e8', headerColor: '#fff', rowHoverBg: isDarkMode ? '#434343' : '#e6f7ff' },
         },
       }}
     >

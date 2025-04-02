@@ -1,0 +1,81 @@
+import React, { useEffect, useState } from 'react';
+import { BASE_URL } from '../../api/index'; // Sử dụng BASE_URL từ index.jsx
+import Banner from '../../components/Banner';
+import ProductList from '../../components/ProductList';
+import BrandList from '../../components/BrandList';
+import ProductModal from '../../components/ProductModal';
+import '../../styles/Home.scss';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
+
+const HomeUser = () => {
+  const [products, setProducts] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  async function fetchData() {
+    setLoading(true);
+    try {
+      // Gọi API công khai dành cho USER
+      const productResponse = await BASE_URL.get('/products');
+      console.log('Dữ liệu sản phẩm:', productResponse.data);
+      setProducts(productResponse.data.content || productResponse.data);
+
+      const brandResponse = await BASE_URL.get('/brands'); // Giả sử có endpoint này
+      console.log('Dữ liệu thương hiệu:', brandResponse.data);
+      setBrands(brandResponse.data.content || brandResponse.data);
+    } catch (error) {
+      console.error('Lỗi khi lấy dữ liệu:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const handleViewDetail = async (productId) => {
+    try {
+      const response = await BASE_URL.get(`/products/${productId}`);
+      setSelectedProduct(response.data);
+      setShowModal(true);
+    } catch (error) {
+      console.error('Lỗi khi lấy chi tiết sản phẩm:', error);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedProduct(null);
+  };
+
+  return (
+    <>
+      {loading ? (
+        <div className="loading-container">
+          <h3>Đang tải dữ liệu...</h3>
+        </div>
+      ) : (
+        <>
+        <Header />
+          <div className="banner-container">
+            <Banner />
+          </div>
+          <ProductList products={products} onViewDetail={handleViewDetail} />
+          <BrandList brands={brands} />
+          <ProductModal
+            showModal={showModal}
+            handleCloseModal={handleCloseModal}
+            selectedProduct={selectedProduct}
+          />
+          <Footer />
+        </>
+      )}
+    </>
+  );
+};
+
+export default HomeUser;

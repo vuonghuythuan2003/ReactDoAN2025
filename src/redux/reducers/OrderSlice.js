@@ -1,10 +1,15 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { BASE_URL_ADMIN, getToken } from '../../api/index'; // Import BASE_URL_ADMIN và getToken
 
 // Action bất đồng bộ để lấy tất cả đơn hàng
 export const fetchAllOrders = createAsyncThunk('orders/fetchAllOrders', async (_, { rejectWithValue }) => {
   try {
-    const response = await axios.get('http://localhost:8080/api/v1/admin/orders');
+    const token = getToken(); // Lấy token từ cookies
+    const response = await BASE_URL_ADMIN.get('/orders', {
+      headers: {
+        Authorization: `Bearer ${token}`, // Thêm token vào header
+      },
+    });
     return response.data.content || response.data;
   } catch (error) {
     return rejectWithValue(error.response?.data || { message: 'Không thể lấy danh sách đơn hàng!' });
@@ -14,7 +19,12 @@ export const fetchAllOrders = createAsyncThunk('orders/fetchAllOrders', async (_
 // Action bất đồng bộ để lấy đơn hàng theo trạng thái
 export const fetchOrdersByStatus = createAsyncThunk('orders/fetchOrdersByStatus', async (status, { rejectWithValue }) => {
   try {
-    const response = await axios.get(`http://localhost:8080/api/v1/admin/orders/status/${status}`);
+    const token = getToken();
+    const response = await BASE_URL_ADMIN.get(`/orders/status/${status}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data.content || response.data;
   } catch (error) {
     return rejectWithValue(error.response?.data || { message: `Không thể lấy danh sách đơn hàng với trạng thái ${status}!` });
@@ -24,7 +34,12 @@ export const fetchOrdersByStatus = createAsyncThunk('orders/fetchOrdersByStatus'
 // Action bất đồng bộ để lấy chi tiết đơn hàng
 export const fetchOrderDetail = createAsyncThunk('orders/fetchOrderDetail', async (orderId, { rejectWithValue }) => {
   try {
-    const response = await axios.get(`http://localhost:8080/api/v1/admin/orders/${orderId}`);
+    const token = getToken();
+    const response = await BASE_URL_ADMIN.get(`/orders/${orderId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data;
   } catch (error) {
     return rejectWithValue(error.response?.data || { message: 'Không thể lấy chi tiết đơn hàng!' });
@@ -34,10 +49,16 @@ export const fetchOrderDetail = createAsyncThunk('orders/fetchOrderDetail', asyn
 // Action bất đồng bộ để cập nhật trạng thái đơn hàng
 export const updateOrderStatus = createAsyncThunk('orders/updateOrderStatus', async ({ orderId, status }, { rejectWithValue }) => {
   try {
-    const response = await axios.put(
-      `http://localhost:8080/api/v1/admin/orders/${orderId}/status`,
+    const token = getToken();
+    const response = await BASE_URL_ADMIN.put(
+      `/orders/${orderId}/status`,
       { status },
-      { headers: { 'Content-Type': 'application/json' } }
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      }
     );
     return response.data;
   } catch (error) {

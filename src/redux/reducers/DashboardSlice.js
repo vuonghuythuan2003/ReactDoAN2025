@@ -1,53 +1,71 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { BASE_URL_ADMIN, getToken } from '../../api/index'; 
 
-export const fetchDashboardData = createAsyncThunk('dashboard/fetchDashboardData', async ({ from, to }, { rejectWithValue }) => {
-  try {
-    // Fetch total users
-    const userResponse = await axios.get('http://localhost:8080/api/v1/admin/users', {
-      params: { page: 0, size: 1, sortBy: 'createdAt', direction: 'desc' },
-    });
-    const totalUsers = userResponse.data.totalElements || 0;
+export const fetchDashboardData = createAsyncThunk(
+  'dashboard/fetchDashboardData',
+  async ({ from, to }, { rejectWithValue }) => {
+    try {
+      const token = getToken();
 
-    // Fetch new users this month
-    const newUsersResponse = await axios.get('http://localhost:8080/api/v1/admin/new-accounts-this-month');
-    const newUsersThisMonth = newUsersResponse.data || [];
+      const userResponse = await BASE_URL_ADMIN.get('/users', {
+        params: { page: 0, size: 1, sortBy: 'createdAt', direction: 'desc' },
+      });
+      const totalUsers = userResponse.data.totalElements || 0;
 
-    // Fetch top spending customers
-    const topSpendingResponse = await axios.get('http://localhost:8080/api/v1/admin/reports/top-spending-customers', {
-      params: { from, to },
-    });
-    const topSpendingCustomers = topSpendingResponse.data || [];
+      const newUsersResponse = await BASE_URL_ADMIN.get('/new-accounts-this-month');
+      const newUsersThisMonth = newUsersResponse.data || [];
 
-    // Fetch revenue by category
-    const revenueResponse = await axios.get('http://localhost:8080/api/v1/admin/reports/revenue-by-category');
-    const revenueData = revenueResponse.data || [];
+      const topSpendingResponse = await BASE_URL_ADMIN.get('/reports/top-spending-customers', {
+        params: { from, to },
+      });
+      const topSpendingCustomers = topSpendingResponse.data || [];
 
-    // Mock data for traffic and browser stats
-    const trafficData = [
-      { name: 'Organic', value: 44.46, visits: 356 },
-      { name: 'Referral', value: 5.54, visits: 36 },
-      { name: 'Other', value: 50, visits: 245 },
-    ];
-    const browserStats = [
-      { name: 'Google Chrome', value: 50 },
-      { name: 'Mozilla Firefox', value: 30 },
-      { name: 'Internet Explorer', value: 10 },
-      { name: 'Safari', value: 10 },
-    ];
+      const revenueResponse = await BASE_URL_ADMIN.get('/reports/revenue-by-category');
+      const revenueData = revenueResponse.data || [];
 
-    return {
-      totalUsers,
-      newUsersThisMonth,
-      topSpendingCustomers,
-      revenueData,
-      trafficData,
-      browserStats,
-    };
-  } catch (error) {
-    return rejectWithValue(error.response?.data?.message || error.message || 'Không thể lấy dữ liệu dashboard!');
+      const bestSellerResponse = await BASE_URL_ADMIN.get('/reports/best-seller-products', {
+        params: { from, to },
+      });
+      const bestSellerProducts = bestSellerResponse.data || [];
+
+      const mostLikedResponse = await BASE_URL_ADMIN.get('/reports/most-liked-products', {
+        params: { from, to },
+      });
+      const mostLikedProducts = mostLikedResponse.data || [];
+
+      const invoicesResponse = await BASE_URL_ADMIN.get('/invoices-over-time', {
+        params: { from, to },
+      });
+      const totalInvoices = invoicesResponse.data.totalInvoices || 0;
+
+      const trafficData = [
+        { name: 'Organic', value: 44.46, visits: 356 },
+        { name: 'Referral', value: 5.54, visits: 36 },
+        { name: 'Other', value: 50, visits: 245 },
+      ];
+      const browserStats = [
+        { name: 'Google Chrome', value: 50 },
+        { name: 'Mozilla Firefox', value: 30 },
+        { name: 'Internet Explorer', value: 10 },
+        { name: 'Safari', value: 10 },
+      ];
+
+      return {
+        totalUsers,
+        newUsersThisMonth,
+        topSpendingCustomers,
+        revenueData,
+        bestSellerProducts,
+        mostLikedProducts,
+        totalInvoices,
+        trafficData,
+        browserStats,
+      };
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message || 'Không thể lấy dữ liệu dashboard!');
+    }
   }
-});
+);
 
 const dashboardSlice = createSlice({
   name: 'dashboard',
@@ -55,9 +73,12 @@ const dashboardSlice = createSlice({
     totalUsers: 0,
     newUsersThisMonth: [],
     topSpendingCustomers: [],
+    revenueData: [],
+    bestSellerProducts: [],
+    mostLikedProducts: [],
+    totalInvoices: 0,
     trafficData: [],
     browserStats: [],
-    revenueData: [],
     loading: false,
     error: null,
     from: new Date('2025-02-01T00:00:00').toISOString(),
@@ -80,9 +101,12 @@ const dashboardSlice = createSlice({
         state.totalUsers = action.payload.totalUsers;
         state.newUsersThisMonth = action.payload.newUsersThisMonth;
         state.topSpendingCustomers = action.payload.topSpendingCustomers;
+        state.revenueData = action.payload.revenueData;
+        state.bestSellerProducts = action.payload.bestSellerProducts;
+        state.mostLikedProducts = action.payload.mostLikedProducts;
+        state.totalInvoices = action.payload.totalInvoices;
         state.trafficData = action.payload.trafficData;
         state.browserStats = action.payload.browserStats;
-        state.revenueData = action.payload.revenueData;
       })
       .addCase(fetchDashboardData.rejected, (state, action) => {
         state.loading = false;

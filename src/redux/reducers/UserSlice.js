@@ -1,11 +1,15 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { BASE_URL_ADMIN, getToken } from '../../api/index';
 
 // Action bất đồng bộ để lấy tất cả người dùng
 export const fetchUsers = createAsyncThunk('users/fetchUsers', async ({ page, size, sortBy, direction }, { rejectWithValue }) => {
   try {
-    const response = await axios.get('http://localhost:8080/api/v1/admin/users', {
+    const token = getToken();
+    const response = await BASE_URL_ADMIN.get('/users', {
       params: { page: page - 1, size, sortBy, direction },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
     const data = response.data.content || response.data;
     if (!Array.isArray(data)) throw new Error('Dữ liệu người dùng không phải mảng.');
@@ -18,7 +22,12 @@ export const fetchUsers = createAsyncThunk('users/fetchUsers', async ({ page, si
 // Action bất đồng bộ để lấy tất cả vai trò
 export const fetchRoles = createAsyncThunk('users/fetchRoles', async (_, { rejectWithValue }) => {
   try {
-    const response = await axios.get('http://localhost:8080/api/v1/admin/roles');
+    const token = getToken();
+    const response = await BASE_URL_ADMIN.get('/roles', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     const data = response.data;
     if (!Array.isArray(data)) throw new Error('Dữ liệu vai trò không phải mảng.');
     return data;
@@ -30,11 +39,20 @@ export const fetchRoles = createAsyncThunk('users/fetchRoles', async (_, { rejec
 // Action bất đồng bộ để thêm hoặc xóa vai trò
 export const updateUserRoles = createAsyncThunk('users/updateUserRoles', async ({ userId, rolesToAdd, rolesToRemove }, { rejectWithValue }) => {
   try {
+    const token = getToken();
     for (const roleId of rolesToAdd) {
-      await axios.put(`http://localhost:8080/api/v1/admin/users/${userId}/role/${roleId}`, {});
+      await BASE_URL_ADMIN.put(`/users/${userId}/role/${roleId}`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
     }
     for (const roleId of rolesToRemove) {
-      await axios.delete(`http://localhost:8080/api/v1/admin/users/${userId}/role/${roleId}`);
+      await BASE_URL_ADMIN.delete(`/users/${userId}/role/${roleId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
     }
     return { userId, rolesToAdd, rolesToRemove };
   } catch (error) {
@@ -45,8 +63,12 @@ export const updateUserRoles = createAsyncThunk('users/updateUserRoles', async (
 // Action bất đồng bộ để cập nhật trạng thái người dùng
 export const toggleUserStatus = createAsyncThunk('users/toggleUserStatus', async ({ userId, status }, { rejectWithValue }) => {
   try {
-    const response = await axios.put(`http://localhost:8080/api/v1/admin/users/${userId}`, {}, {
+    const token = getToken();
+    const response = await BASE_URL_ADMIN.put(`/users/${userId}`, {}, {
       params: { status },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
     return { userId, status: response.data.status || status };
   } catch (error) {
@@ -68,6 +90,7 @@ const userSlice = createSlice({
     sortDirection: 'desc',
     selectedUser: null,
     selectedRoles: [],
+    currentUser: null, // Thêm trường để lưu thông tin người dùng hiện tại
   },
   reducers: {
     setCurrentPage: (state, action) => { state.currentPage = action.payload; },
@@ -84,6 +107,12 @@ const userSlice = createSlice({
     clearSelectedUser: (state) => {
       state.selectedUser = null;
       state.selectedRoles = [];
+    },
+    setCurrentUser: (state, action) => { // Action để thiết lập người dùng hiện tại
+      state.currentUser = action.payload;
+    },
+    clearCurrentUser: (state) => { // Action để xóa người dùng hiện tại
+      state.currentUser = null;
     },
   },
   extraReducers: (builder) => {
@@ -151,5 +180,5 @@ const userSlice = createSlice({
   },
 });
 
-export const { setCurrentPage, setPageSize, setSort, setSelectedUser, setSelectedRoles, clearSelectedUser } = userSlice.actions;
+export const { setCurrentPage, setPageSize, setSort, setSelectedUser, setSelectedRoles, clearSelectedUser, setCurrentUser, clearCurrentUser } = userSlice.actions;
 export default userSlice.reducer;

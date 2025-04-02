@@ -1,15 +1,16 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import '../styles/DefaultLayout.scss';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import '../styles/DefaultLayout.scss';
+
 function DefaultLayout() {
   return (
     <>
-      <Header />
+     <Header />
       <Outlet />
-      <Footer />
-    </>
+      <Footer /></>
+     
   );
 }
 

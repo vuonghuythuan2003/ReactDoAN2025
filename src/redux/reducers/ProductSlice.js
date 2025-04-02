@@ -1,75 +1,101 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { BASE_URL_ADMIN, getToken } from '../../api/index';
 
 // Action bất đồng bộ để lấy danh sách sản phẩm
-export const fetchProducts = createAsyncThunk('products/fetchProducts', async (_, { rejectWithValue }) => {
-  try {
-    const response = await axios.get('http://localhost:8080/api/v1/admin/products', { params: { page: 0, size: 1000 } });
-    return response.data.content || response.data;
-  } catch (error) {
-    return rejectWithValue(error.response?.data || { message: 'Không thể lấy danh sách sản phẩm!' });
+export const fetchProducts = createAsyncThunk(
+  'products/fetchProducts',
+  async ({ page = 1, size = 10, sortBy = 'productName', direction = 'asc' }, { rejectWithValue }) => {
+    try {
+      const response = await BASE_URL_ADMIN.get('/products', {
+        params: {
+          page: page - 1,
+          size,
+          sortBy,
+          direction,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Không thể lấy danh sách sản phẩm!' });
+    }
   }
-});
+);
 
 // Action bất đồng bộ để lấy chi tiết sản phẩm
-export const fetchProductDetail = createAsyncThunk('products/fetchProductDetail', async (productId, { rejectWithValue }) => {
-  try {
-    const response = await axios.get(`http://localhost:8080/api/v1/admin/products/${productId}`);
-    return response.data;
-  } catch (error) {
-    return rejectWithValue(error.response?.data || { message: 'Không thể lấy chi tiết sản phẩm!' });
+export const fetchProductDetail = createAsyncThunk(
+  'products/fetchProductDetail',
+  async (productId, { rejectWithValue }) => {
+    try {
+      const response = await BASE_URL_ADMIN.get(`/products/${productId}`);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Không thể lấy chi tiết sản phẩm!' });
+    }
   }
-});
+);
 
 // Action bất đồng bộ để thêm sản phẩm
-export const addProduct = createAsyncThunk('products/addProduct', async (productData, { rejectWithValue }) => {
-  try {
-    const formData = new FormData();
-    Object.keys(productData).forEach((key) => {
-      if (key === 'image' && productData[key]?.[0]?.originFileObj) {
-        formData.append(key, productData[key][0].originFileObj);
-      } else {
-        formData.append(key, productData[key]);
-      }
-    });
-    const response = await axios.post('http://localhost:8080/api/v1/admin/products', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data;
-  } catch (error) {
-    return rejectWithValue(error.response?.data || { message: 'Thêm sản phẩm thất bại!' });
+export const addProduct = createAsyncThunk(
+  'products/addProduct',
+  async (productData, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      Object.keys(productData).forEach((key) => {
+        if (key === 'image' && productData[key]?.[0]?.originFileObj) {
+          formData.append(key, productData[key][0].originFileObj);
+        } else {
+          formData.append(key, productData[key]);
+        }
+      });
+      const response = await BASE_URL_ADMIN.post('/products', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Thêm sản phẩm thất bại!' });
+    }
   }
-});
+);
 
 // Action bất đồng bộ để cập nhật sản phẩm
-export const updateProduct = createAsyncThunk('products/updateProduct', async ({ productId, productData }, { rejectWithValue }) => {
-  try {
-    const formData = new FormData();
-    Object.keys(productData).forEach((key) => {
-      if (key === 'image' && productData[key]?.[0]?.originFileObj) {
-        formData.append(key, productData[key][0].originFileObj);
-      } else {
-        formData.append(key, productData[key]);
-      }
-    });
-    const response = await axios.put(`http://localhost:8080/api/v1/admin/products/${productId}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data;
-  } catch (error) {
-    return rejectWithValue(error.response?.data || { message: 'Cập nhật sản phẩm thất bại!' });
+export const updateProduct = createAsyncThunk(
+  'products/updateProduct',
+  async ({ productId, productData }, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      Object.keys(productData).forEach((key) => {
+        if (key === 'image' && productData[key]?.[0]?.originFileObj) {
+          formData.append(key, productData[key][0].originFileObj);
+        } else {
+          formData.append(key, productData[key]);
+        }
+      });
+      const response = await BASE_URL_ADMIN.put(`/products/${productId}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Cập nhật sản phẩm thất bại!' });
+    }
   }
-});
+);
 
 // Action bất đồng bộ để xóa sản phẩm
-export const deleteProduct = createAsyncThunk('products/deleteProduct', async (productId, { rejectWithValue }) => {
-  try {
-    const response = await axios.delete(`http://localhost:8080/api/v1/admin/products/${productId}`);
-    return { productId, message: response.data || 'Xóa sản phẩm thành công!' };
-  } catch (error) {
-    return rejectWithValue(error.response?.data || { message: 'Xóa sản phẩm thất bại!' });
+export const deleteProduct = createAsyncThunk(
+  'products/deleteProduct',
+  async (productId, { rejectWithValue }) => {
+    try {
+      const response = await BASE_URL_ADMIN.delete(`/products/${productId}`);
+      return { productId, message: response.data || 'Xóa sản phẩm thành công!' };
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Xóa sản phẩm thất bại!' });
+    }
   }
-});
+);
 
 // Action để set currentPage, pageSize và searchText
 export const setCurrentPage = createAsyncThunk('products/setCurrentPage', async (page) => page);
@@ -80,15 +106,19 @@ const productSlice = createSlice({
   name: 'products',
   initialState: {
     products: [],
-    filteredProducts: [], // Thêm filteredProducts để lưu danh sách đã lọc
+    filteredProducts: [],
     categories: [],
     brands: [],
     selectedProduct: null,
     loading: false,
     error: null,
     currentPage: 1,
-    pageSize: 5,
-    searchText: '', // Thêm searchText vào state
+    pageSize: 10,
+    totalElements: 0,
+    totalPages: 0,
+    sortBy: 'productName',
+    direction: 'asc',
+    searchText: '',
   },
   reducers: {
     clearSelectedProduct: (state) => {
@@ -102,7 +132,6 @@ const productSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Fetch Products
     builder
       .addCase(fetchProducts.pending, (state) => {
         state.loading = true;
@@ -110,9 +139,10 @@ const productSlice = createSlice({
       })
       .addCase(fetchProducts.fulfilled, (state, action) => {
         state.loading = false;
-        state.products = action.payload;
-        // Lọc lại danh sách dựa trên searchText hiện tại
-        state.filteredProducts = action.payload.filter((product) =>
+        state.products = action.payload.content;
+        state.totalElements = action.payload.totalElements;
+        state.totalPages = action.payload.totalPages;
+        state.filteredProducts = action.payload.content.filter((product) =>
           product.productName.toLowerCase().includes(state.searchText.toLowerCase()) ||
           product.sku.toLowerCase().includes(state.searchText.toLowerCase()) ||
           (product.description && product.description.toLowerCase().includes(state.searchText.toLowerCase()))
@@ -123,7 +153,6 @@ const productSlice = createSlice({
         state.error = action.payload.message;
       });
 
-    // Fetch Product Detail
     builder
       .addCase(fetchProductDetail.pending, (state) => {
         state.loading = true;
@@ -138,7 +167,6 @@ const productSlice = createSlice({
         state.error = action.payload.message;
       });
 
-    // Add Product
     builder
       .addCase(addProduct.pending, (state) => {
         state.loading = true;
@@ -147,19 +175,18 @@ const productSlice = createSlice({
       .addCase(addProduct.fulfilled, (state, action) => {
         state.loading = false;
         state.products.push(action.payload);
-        // Lọc lại danh sách sau khi thêm
         state.filteredProducts = state.products.filter((product) =>
           product.productName.toLowerCase().includes(state.searchText.toLowerCase()) ||
           product.sku.toLowerCase().includes(state.searchText.toLowerCase()) ||
           (product.description && product.description.toLowerCase().includes(state.searchText.toLowerCase()))
         );
+        state.totalElements += 1;
       })
       .addCase(addProduct.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload.message;
       });
 
-    // Update Product
     builder
       .addCase(updateProduct.pending, (state) => {
         state.loading = true;
@@ -171,7 +198,6 @@ const productSlice = createSlice({
         state.products = state.products.map((prod) =>
           prod.productId === updatedProduct.productId ? updatedProduct : prod
         );
-        // Lọc lại danh sách sau khi cập nhật
         state.filteredProducts = state.products.filter((product) =>
           product.productName.toLowerCase().includes(state.searchText.toLowerCase()) ||
           product.sku.toLowerCase().includes(state.searchText.toLowerCase()) ||
@@ -183,7 +209,6 @@ const productSlice = createSlice({
         state.error = action.payload.message;
       });
 
-    // Delete Product
     builder
       .addCase(deleteProduct.pending, (state) => {
         state.loading = true;
@@ -193,19 +218,18 @@ const productSlice = createSlice({
         state.loading = false;
         const { productId } = action.payload;
         state.products = state.products.filter((prod) => prod.productId !== productId);
-        // Lọc lại danh sách sau khi xóa
         state.filteredProducts = state.products.filter((product) =>
           product.productName.toLowerCase().includes(state.searchText.toLowerCase()) ||
           product.sku.toLowerCase().includes(state.searchText.toLowerCase()) ||
           (product.description && product.description.toLowerCase().includes(state.searchText.toLowerCase()))
         );
+        state.totalElements -= 1;
       })
       .addCase(deleteProduct.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload.message;
       });
 
-    // Set Pagination và Search
     builder
       .addCase(setCurrentPage.fulfilled, (state, action) => {
         state.currentPage = action.payload;
@@ -220,7 +244,7 @@ const productSlice = createSlice({
           product.sku.toLowerCase().includes(action.payload.toLowerCase()) ||
           (product.description && product.description.toLowerCase().includes(action.payload.toLowerCase()))
         );
-        state.currentPage = 1; // Reset về trang đầu tiên khi tìm kiếm
+        state.currentPage = 1;
       });
   },
 });

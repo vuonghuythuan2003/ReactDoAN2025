@@ -15,10 +15,26 @@ const User = () => {
   const [isAddRoleModalVisible, setIsAddRoleModalVisible] = useState(false);
   const [isRemoveRoleModalVisible, setIsRemoveRoleModalVisible] = useState(false);
   const [roleToRemove, setRoleToRemove] = useState(null);
+  const [initialLoading, setInitialLoading] = useState(true); // Thêm trạng thái initialLoading
 
   useEffect(() => {
-    dispatch(fetchUsers({ page: currentPage, size: pageSize, sortBy, direction: sortDirection }));
-    dispatch(fetchRoles());
+    const fetchInitialData = async () => {
+      try {
+        await Promise.all([
+          dispatch(fetchUsers({ page: currentPage, size: pageSize, sortBy, direction: sortDirection })),
+          dispatch(fetchRoles()),
+        ]);
+      } catch (error) {
+        console.error('Error fetching initial data:', error);
+        toast.error('Không thể tải dữ liệu người dùng!', { position: 'top-right', autoClose: 3000 });
+      } finally {
+        // Giả lập loading 3 giây
+        setTimeout(() => {
+          setInitialLoading(false);
+        }, 3000);
+      }
+    };
+    fetchInitialData();
   }, [dispatch, currentPage, pageSize, sortBy, sortDirection]);
 
   useEffect(() => {
@@ -259,8 +275,8 @@ const User = () => {
         <Title level={2} style={{ textAlign: 'center', color: '#1a73e8', marginBottom: '30px' }}>
           Quản lý người dùng
         </Title>
-        <Spin spinning={loading} tip="Đang tải dữ liệu..." size="large">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Spin spinning={initialLoading || loading} tip="Đang tải dữ liệu..." size="large">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <Title level={4} style={{ margin: 0, color: '#333' }}>
               Tổng số người dùng: {totalUsers}
             </Title>

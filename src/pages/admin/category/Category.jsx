@@ -11,7 +11,7 @@ const { Title } = Typography;
 const Category = () => {
   const dispatch = useDispatch();
   const { categories, filteredCategories, selectedCategory, loading, error, currentPage, pageSize, searchText } = useSelector((state) => state.categories);
-
+  const [initialLoading, setInitialLoading] = useState(true); // Thêm trạng thái initialLoading
   const [isModalVisible, setIsModalVisible] = useState(false); // Modal chi tiết danh mục
   const [isAddModalVisible, setIsAddModalVisible] = useState(false); // Modal thêm danh mục
   const [isEditModalVisible, setIsEditModalVisible] = useState(false); // Modal chỉnh sửa danh mục
@@ -19,9 +19,23 @@ const Category = () => {
   const [editForm] = Form.useForm(); // Form để chỉnh sửa danh mục
 
   // Lấy danh sách danh mục khi component mount
-  useEffect(() => {
-    dispatch(fetchCategories());
-  }, [dispatch]);
+    // Lấy danh sách danh mục khi component mount
+    useEffect(() => {
+      const fetchInitialData = async () => {
+        try {
+          await dispatch(fetchCategories());
+        } catch (error) {
+          console.error('Error fetching categories:', error);
+          toast.error('Không thể tải danh sách danh mục!', { position: 'top-right', autoClose: 3000 });
+        } finally {
+          // Giả lập loading 3 giây
+          setTimeout(() => {
+            setInitialLoading(false);
+          }, 3000);
+        }
+      };
+      fetchInitialData();
+    }, [dispatch]);
 
   // Hiển thị thông báo lỗi từ Redux
   useEffect(() => {
@@ -287,8 +301,8 @@ const Category = () => {
           Danh sách danh mục
         </Title>
         <Card style={{ borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', background: '#fff' }}>
-          <Spin spinning={loading} tip="Đang tải dữ liệu..." size="large">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Spin spinning={initialLoading || loading} tip="Đang tải dữ liệu..." size="large">            
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Title level={4} style={{ margin: 0, color: '#333' }}>
                 Tổng số danh mục: {filteredCategories.length}
               </Title>

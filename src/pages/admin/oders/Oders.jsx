@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react'; 
 import { useSelector, useDispatch } from 'react-redux';
 import { Table, Input, Select, Button, Typography, Spin, Space, Tag, Modal, Card, Descriptions } from 'antd';
 import { toast } from 'react-toastify';
@@ -12,12 +12,24 @@ const { Option } = Select;
 const Orders = () => {
   const dispatch = useDispatch();
   const { orders, filteredOrders, selectedOrder, loading, error, currentPage, pageSize, searchText, statusFilter } = useSelector((state) => state.orders);
-
+  const [initialLoading, setInitialLoading] = useState(true); // Thêm trạng thái initialLoading
   const statusOptions = ['WAITING', 'CONFIRM', 'DELIVERY', 'SUCCESS', 'CANCEL'];
 
-  // Gọi API khi component được mount
   useEffect(() => {
-    dispatch(fetchAllOrders());
+    const fetchInitialData = async () => {
+      try {
+        await dispatch(fetchAllOrders());
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+        toast.error('Không thể tải danh sách đơn hàng!', { position: 'top-right', autoClose: 3000 });
+      } finally {
+        // Giả lập loading 3 giây
+        setTimeout(() => {
+          setInitialLoading(false);
+        }, 3000);
+      }
+    };
+    fetchInitialData();
   }, [dispatch]);
 
   // Hiển thị thông báo lỗi từ Redux
@@ -281,8 +293,8 @@ const Orders = () => {
           Quản lý đơn hàng
         </Title>
         <Card style={{ borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', background: '#fff' }}>
-          <Spin spinning={loading} tip="Đang tải dữ liệu..." size="large">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Spin spinning={initialLoading || loading} tip="Đang tải dữ liệu..." size="large">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Title level={4} style={{ margin: 0, color: '#333' }}>
                 Tổng số đơn hàng: {filteredOrders.length}
               </Title>

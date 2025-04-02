@@ -1,10 +1,15 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { BASE_URL_ADMIN, getToken } from '../../api/index'; // Import BASE_URL_ADMIN và getToken
 
 // Action bất đồng bộ để lấy danh sách danh mục
 export const fetchCategories = createAsyncThunk('categories/fetchCategories', async (_, { rejectWithValue }) => {
   try {
-    const response = await axios.get('http://localhost:8080/api/v1/admin/categories');
+    const token = getToken(); // Lấy token từ cookies
+    const response = await BASE_URL_ADMIN.get('/categories', {
+      headers: {
+        Authorization: `Bearer ${token}`, // Thêm token vào header
+      },
+    });
     return response.data.content || response.data;
   } catch (error) {
     return rejectWithValue(error.response?.data?.message || error.message || 'Không thể lấy danh sách danh mục!');
@@ -14,7 +19,12 @@ export const fetchCategories = createAsyncThunk('categories/fetchCategories', as
 // Action bất đồng bộ để lấy chi tiết danh mục
 export const fetchCategoryDetail = createAsyncThunk('categories/fetchCategoryDetail', async (categoryId, { rejectWithValue }) => {
   try {
-    const response = await axios.get(`http://localhost:8080/api/v1/admin/categories/${categoryId}`);
+    const token = getToken();
+    const response = await BASE_URL_ADMIN.get(`/categories/${categoryId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data;
   } catch (error) {
     return rejectWithValue(error.response?.data?.message || error.message || 'Không thể lấy chi tiết danh mục!');
@@ -24,7 +34,12 @@ export const fetchCategoryDetail = createAsyncThunk('categories/fetchCategoryDet
 // Action bất đồng bộ để thêm danh mục
 export const addCategory = createAsyncThunk('categories/addCategory', async (categoryData, { rejectWithValue }) => {
   try {
-    const response = await axios.post('http://localhost:8080/api/v1/admin/categories', categoryData);
+    const token = getToken();
+    const response = await BASE_URL_ADMIN.post('/categories', categoryData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data;
   } catch (error) {
     return rejectWithValue(error.response?.data || { message: 'Thêm danh mục thất bại!' });
@@ -34,7 +49,12 @@ export const addCategory = createAsyncThunk('categories/addCategory', async (cat
 // Action bất đồng bộ để cập nhật danh mục
 export const updateCategory = createAsyncThunk('categories/updateCategory', async ({ categoryId, categoryData }, { rejectWithValue }) => {
   try {
-    const response = await axios.put(`http://localhost:8080/api/v1/admin/categories/${categoryId}`, categoryData);
+    const token = getToken();
+    const response = await BASE_URL_ADMIN.put(`/categories/${categoryId}`, categoryData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data;
   } catch (error) {
     return rejectWithValue(error.response?.data || { message: 'Cập nhật danh mục thất bại!' });
@@ -44,7 +64,12 @@ export const updateCategory = createAsyncThunk('categories/updateCategory', asyn
 // Action bất đồng bộ để xóa danh mục
 export const deleteCategory = createAsyncThunk('categories/deleteCategory', async (categoryId, { rejectWithValue }) => {
   try {
-    const response = await axios.delete(`http://localhost:8080/api/v1/admin/categories/${categoryId}`);
+    const token = getToken();
+    const response = await BASE_URL_ADMIN.delete(`/categories/${categoryId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return { categoryId, message: response.data || 'Xóa danh mục thành công!' };
   } catch (error) {
     return rejectWithValue(error.response?.data?.message || error.message || 'Xóa danh mục thất bại!');
@@ -67,7 +92,7 @@ const categorySlice = createSlice({
     error: null,
     currentPage: 1,
     pageSize: 5,
-    searchText: '', // Thêm searchText vào state
+    searchText: '',
   },
   reducers: {
     clearSelectedCategory: (state) => {

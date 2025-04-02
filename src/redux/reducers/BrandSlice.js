@@ -1,11 +1,15 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { BASE_URL_ADMIN, getToken } from '../../api/index'; // Import BASE_URL_ADMIN và getToken
 
 // Async thunk to fetch all brands
 export const fetchBrands = createAsyncThunk('brands/fetchBrands', async (_, { rejectWithValue }) => {
   try {
-    const response = await axios.get('http://localhost:8080/api/v1/admin/brands', {
+    const token = getToken(); // Lấy token từ cookies
+    const response = await BASE_URL_ADMIN.get('/brands', {
       params: { page: 0, size: 1000 },
+      headers: {
+        Authorization: `Bearer ${token}`, // Thêm token vào header
+      },
     });
     return response.data.content || response.data;
   } catch (error) {
@@ -16,7 +20,12 @@ export const fetchBrands = createAsyncThunk('brands/fetchBrands', async (_, { re
 // Async thunk to fetch brand details by ID
 export const fetchBrandDetail = createAsyncThunk('brands/fetchBrandDetail', async (brandId, { rejectWithValue }) => {
   try {
-    const response = await axios.get(`http://localhost:8080/api/v1/admin/brands/${brandId}`);
+    const token = getToken();
+    const response = await BASE_URL_ADMIN.get(`/brands/${brandId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data;
   } catch (error) {
     return rejectWithValue(error.response?.data?.message || 'Không thể lấy chi tiết thương hiệu!');
@@ -26,6 +35,7 @@ export const fetchBrandDetail = createAsyncThunk('brands/fetchBrandDetail', asyn
 // Async thunk to add a new brand
 export const addBrand = createAsyncThunk('brands/addBrand', async (brandData, { rejectWithValue }) => {
   try {
+    const token = getToken();
     const formData = new FormData();
     Object.entries(brandData).forEach(([key, value]) => {
       if (key === 'image' && value && value.length > 0) {
@@ -34,8 +44,11 @@ export const addBrand = createAsyncThunk('brands/addBrand', async (brandData, { 
         formData.append(key, value);
       }
     });
-    const response = await axios.post('http://localhost:8080/api/v1/admin/brands', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    const response = await BASE_URL_ADMIN.post('/brands', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${token}`,
+      },
     });
     return response.data;
   } catch (error) {
@@ -43,18 +56,23 @@ export const addBrand = createAsyncThunk('brands/addBrand', async (brandData, { 
   }
 });
 
+// Async thunk to update a brand
 export const updateBrand = createAsyncThunk('brands/updateBrand', async ({ brandId, brandData }, { rejectWithValue }) => {
   try {
+    const token = getToken();
     const formData = new FormData();
     Object.entries(brandData).forEach(([key, value]) => {
       if (key === 'image' && value && value.length > 0) {
-        formData.append(key, value[0].originFileObj); 
+        formData.append(key, value[0].originFileObj);
       } else if (key !== 'image' && value !== undefined && value !== null) {
-        formData.append(key, value); 
+        formData.append(key, value);
       }
     });
-    const response = await axios.put(`http://localhost:8080/api/v1/admin/brands/${brandId}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    const response = await BASE_URL_ADMIN.put(`/brands/${brandId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${token}`,
+      },
     });
     return response.data;
   } catch (error) {
@@ -65,7 +83,12 @@ export const updateBrand = createAsyncThunk('brands/updateBrand', async ({ brand
 // Async thunk to delete a brand
 export const deleteBrand = createAsyncThunk('brands/deleteBrand', async (brandId, { rejectWithValue }) => {
   try {
-    await axios.delete(`http://localhost:8080/api/v1/admin/brands/${brandId}`);
+    const token = getToken();
+    await BASE_URL_ADMIN.delete(`/brands/${brandId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return brandId;
   } catch (error) {
     return rejectWithValue(error.response?.data?.message || 'Xóa thương hiệu thất bại!');

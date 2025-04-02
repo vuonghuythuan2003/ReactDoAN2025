@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'; // Chỉ import các hook cần thiết
 import { Card, Input, Button, List, Spin, ConfigProvider, theme } from 'antd';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import moment from 'moment';
+import { getToken } from '../../api/index'; // Import getToken để lấy token từ cookies
 import 'antd/dist/reset.css';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -23,7 +24,7 @@ const ProductComments = ({ productId }) => {
     try {
       const response = await axios.get(`http://localhost:8080/api/v1/comments/product/${productId}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${getToken()}`, // Sử dụng getToken() thay vì localStorage
         },
       });
       setComments(response.data || []);
@@ -56,7 +57,7 @@ const ProductComments = ({ productId }) => {
         },
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${getToken()}`, // Sử dụng getToken() thay vì localStorage
           },
         }
       );
@@ -86,11 +87,13 @@ const ProductComments = ({ productId }) => {
               borderRadius: token.borderRadiusLG,
               boxShadow: token.boxShadow,
             }}
-            headStyle={{
-              background: '#1a73e8',
-              color: '#fff',
-              borderTopLeftRadius: token.borderRadiusLG,
-              borderTopRightRadius: token.borderRadiusLG,
+            styles={{
+              header: {
+                background: '#1a73e8',
+                color: '#fff',
+                borderTopLeftRadius: token.borderRadiusLG,
+                borderTopRightRadius: token.borderRadiusLG,
+              },
             }}
           >
             <TextArea

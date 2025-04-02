@@ -6,15 +6,15 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Image } from 'antd';
 import { fetchProducts, fetchProductDetail, addProduct, updateProduct, deleteProduct, setCurrentPage, setPageSize, clearSelectedProduct, setCategories, setBrands, setSearchText } from '../../../redux/reducers/ProductSlice';
-import axios from 'axios';
+import { BASE_URL_ADMIN } from '../../../api/index'; 
 
 const { Title } = Typography;
 const { Option } = Select;
 
 const Product = () => {
   const dispatch = useDispatch();
-  const { products, filteredProducts, categories, brands, selectedProduct, loading, error, currentPage, pageSize, searchText } = useSelector((state) => state.products);
-
+  const { products, filteredProducts, categories, brands, selectedProduct, loading, error, currentPage, pageSize, totalElements, totalPages, searchText } = useSelector((state) => state.products);
+  const [initialLoading, setInitialLoading] = useState(true); // Thêm trạng thái initialLoading
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -29,18 +29,24 @@ const Product = () => {
     const fetchInitialData = async () => {
       try {
         const [categoryRes, brandRes] = await Promise.all([
-          axios.get('http://localhost:8080/api/v1/admin/categories', { params: { page: 0, size: 1000 } }),
-          axios.get('http://localhost:8080/api/v1/admin/brands', { params: { page: 0, size: 1000 } }),
+          BASE_URL_ADMIN.get('/categories', { params: { page: 0, size: 1000 } }),
+          BASE_URL_ADMIN.get('/brands', { params: { page: 0, size: 1000 } }),
         ]);
         dispatch(setCategories(categoryRes.data.content || categoryRes.data));
         dispatch(setBrands(brandRes.data.content || brandRes.data));
-        dispatch(fetchProducts());
+        dispatch(fetchProducts({ page: currentPage, size: pageSize }));
       } catch (error) {
+        console.error('Error fetching initial data:', error);
         toast.error('Không thể tải dữ liệu ban đầu!', { position: 'top-right', autoClose: 3000 });
+      } finally {
+        // Giả lập loading 3 giây
+        setTimeout(() => {
+          setInitialLoading(false);
+        }, 3000);
       }
     };
     fetchInitialData();
-  }, [dispatch]);
+  }, [dispatch, currentPage, pageSize]);
 
   // Hiển thị thông báo lỗi từ Redux
   useEffect(() => {
@@ -112,12 +118,9 @@ const Product = () => {
         dispatch(deleteProduct(productId)).then((result) => {
           if (result.meta.requestStatus === 'fulfilled') {
             toast.success(`Xóa sản phẩm "${productName}" thành công!`, { position: 'top-right', autoClose: 3000 });
-            dispatch(setCurrentPage(1));
+            dispatch(fetchProducts({ page: currentPage, size: pageSize }));
           }
         });
-      },
-      onCancel: () => {
-        toast.info('Hủy xóa sản phẩm.', { position: 'top-right', autoClose: 2000 });
       },
     });
   };
@@ -136,6 +139,7 @@ const Product = () => {
       if (result.meta.requestStatus === 'fulfilled') {
         toast.success('Thêm sản phẩm thành công!', { position: 'top-right', autoClose: 3000 });
         handleAddModalClose();
+        dispatch(fetchProducts({ page: currentPage, size: pageSize }));
       }
     });
   };
@@ -146,6 +150,7 @@ const Product = () => {
       if (result.meta.requestStatus === 'fulfilled') {
         toast.success('Cập nhật sản phẩm thành công!', { position: 'top-right', autoClose: 3000 });
         handleEditModalClose();
+        dispatch(fetchProducts({ page: currentPage, size: pageSize }));
       }
     });
   };
@@ -294,11 +299,9 @@ const Product = () => {
     },
   ];
 
-  const paginatedData = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
   return (
     <>
-      <style>
+    <style>
         {`
           .table-row {
             opacity: 0;
@@ -373,9 +376,9 @@ const Product = () => {
           .ant-table-placeholder { background: #f9fbff; color: #595959; font-style: italic; }
           .formContainer { background: #f0f7ff; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
           .ant-form-item-label > label { font-weight: 500; color: #333; }
-          .ant-input, .ant-input-number, .ant-select-selector { border-radius: 4px !important; border: 1px solid #d9d9d9 !important; }
-          .ant-input:hover, .ant-input-number:hover, .ant-select-selector:hover { border-color: #1a73e8 !important; }
-          .ant-input:focus, .ant-input-number:focus, .ant-select-selector:focus { border-color: #1a73e8 !important; box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2) !important; }
+          .ant-input, .ant-input-textarea { border-radius: 4px !important; border: 1px solid #d9d9d9 !important; }
+          .ant-input:hover, .ant-input-textarea:hover { border-color: #1a73e8 !important; }
+          .ant-input:focus, .ant-input-textarea:focus { border-color: #1a73e8 !important; box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2) !important; }
           .submitButton { background: #1a73e8; border-color: #1a73e8; border-radius: 4px; height: 40px; font-weight: 500; transition: all 0.3s ease; }
           .submitButton:hover { background: #1557b0; border-color: #1557b0; transform: scale(1.05); }
           .cancelButton { border-radius: 4px; height: 40px; font-weight: 500; transition: all 0.3s ease; }
@@ -384,16 +387,15 @@ const Product = () => {
           .ant-input-search .ant-btn { border-radius: 0 4px 4px 0 !important; }
         `}
       </style>
-
       <div style={{ padding: '40px', background: '#f0f2f5', minHeight: '100vh' }}>
         <Title level={2} style={{ textAlign: 'center', color: '#1a73e8', marginBottom: '30px' }}>
           Danh sách sản phẩm
         </Title>
         <Card style={{ borderRadius: 8, background: '#fff', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
-          <Spin spinning={loading} tip="Đang tải dữ liệu...">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Spin spinning={initialLoading || loading} tip="Đang tải dữ liệu...">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Title level={4} style={{ margin: 0, color: '#333' }}>
-                Tổng số sản phẩm: {filteredProducts.length}
+                Tổng số sản phẩm: {totalElements}
               </Title>
               <Space>
                 <Input.Search
@@ -416,18 +418,19 @@ const Product = () => {
             <Table
               className="tableContainer"
               columns={columns}
-              dataSource={paginatedData}
+              dataSource={filteredProducts}
               rowKey="productId"
               pagination={{
                 current: currentPage,
                 pageSize,
-                total: filteredProducts.length,
+                total: totalElements,
                 showSizeChanger: true,
                 pageSizeOptions: ['5', '10', '20'],
                 showTotal: (total) => `Tổng ${total} sản phẩm`,
                 onChange: (page, pageSize) => {
                   dispatch(setCurrentPage(page));
                   dispatch(setPageSize(pageSize));
+                  dispatch(fetchProducts({ page, size: pageSize }));
                 },
               }}
               locale={{ emptyText: 'Không có dữ liệu sản phẩm để hiển thị.' }}
@@ -629,7 +632,6 @@ const Product = () => {
                       rules={[
                         { required: true, message: 'Tên sản phẩm không được để trống' },
                         { max: 100, message: 'Tên sản phẩm không được vượt quá 100 ký tự' },
-                        { whitespace: true, message: 'Tên sản phẩm không được chỉ chứa khoảng trắng' },
                       ]}
                     >
                       <Input placeholder="Nhập tên sản phẩm" />
@@ -642,7 +644,6 @@ const Product = () => {
                       rules={[
                         { required: true, message: 'SKU không được để trống' },
                         { max: 100, message: 'SKU không được vượt quá 100 ký tự' },
-                        { whitespace: true, message: 'SKU không được chỉ chứa khoảng trắng' },
                       ]}
                     >
                       <Input placeholder="Nhập SKU" />

@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Card, Col, Row, Spin, List, Input, Button, ConfigProvider, theme } from 'antd';
-import axios from 'axios';
 import { toast } from 'react-toastify';
 import moment from 'moment';
 import { useOutletContext } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchComments, addReply, setReplyInput, clearReplyInput } from '../../../redux/reducers/CommentSlice';
 import 'antd/dist/reset.css';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -12,42 +13,31 @@ const { useToken } = theme;
 
 const AdminComments = () => {
   const { isDarkMode } = useOutletContext();
-  const [loading, setLoading] = useState(true);
-  const [comments, setComments] = useState([]);
-  const [replyInputs, setReplyInputs] = useState({}); // Store reply input for each comment
+  const dispatch = useDispatch();
+  const { comments, loading, error, replyInputs } = useSelector((state) => state.comments);
 
   useEffect(() => {
-    fetchComments();
-  }, []);
+    dispatch(fetchComments());
+  }, [dispatch]);
 
-  const fetchComments = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get('http://localhost:8080/api/v1/admin/comments', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      setComments(response.data || []);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching comments:', error);
-      toast.error('Không thể tải bình luận!', {
+  useEffect(() => {
+    if (error) {
+      toast.error(error, {
         position: 'top-right',
         autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
       });
-      setLoading(false);
     }
-  };
+  }, [error]);
 
   const handleReplyChange = (commentId, value) => {
-    setReplyInputs({
-      ...replyInputs,
-      [commentId]: value,
-    });
+    dispatch(setReplyInput({ commentId, value }));
   };
 
-  const handleAddReply = async (commentId) => {
+  const handleAddReply = (commentId) => {
     const replyContent = replyInputs[commentId];
     if (!replyContent || !replyContent.trim()) {
       toast.error('Vui lòng nhập nội dung phản hồi!', {
@@ -57,58 +47,27 @@ const AdminComments = () => {
       return;
     }
 
-    try {
-      const response = await axios.post(
-        `http://localhost:8080/api/v1/admin/comments/${commentId}/reply`,
-        {
-          content: replyContent,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
-      setComments(
-        comments.map((comment) =>
-          comment.id === commentId ? { ...comment, reply: response.data } : comment
-        )
-      );
-      setReplyInputs({
-        ...replyInputs,
-        [commentId]: '',
-      });
-      toast.success('Phản hồi đã được thêm!', {
-        position: 'top-right',
-        autoClose: 3000,
-      });
-    } catch (error) {
-      console.error('Error adding reply:', error);
-      toast.error('Không thể thêm phản hồi!', {
-        position: 'top-right',
-        autoClose: 3000,
-      });
-    }
+    dispatch(addReply({ commentId, content: replyContent })).then((result) => {
+      if (result.meta.requestStatus === 'fulfilled') {
+        dispatch(clearReplyInput({ commentId }));
+        toast.success('Phản hồi đã được thêm!', {
+          position: 'top-right',
+          autoClose: 3000,
+        });
+      }
+    });
   };
 
   const CustomComponent = () => {
     const { token } = useToken();
     return (
-      <div
-        style={{
-          padding: token.paddingLG,
-          background: isDarkMode ? token.colorBgBase : '#141414',
-        }}
-      >
+      <div style={{ padding: token.paddingLG, background: isDarkMode ? token.colorBgBase : '#f0f2f5' }}>
         <Spin spinning={loading} tip="Đang tải bình luận..." size="large">
           <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
             <Col xs={24}>
               <Card
                 title="Quản lý bình luận"
-                style={{
-                  borderRadius: token.borderRadiusLG,
-                  boxShadow: token.boxShadow,
-                }}
+                style={{ borderRadius: token.borderRadiusLG, boxShadow: token.boxShadow }}
                 headStyle={{
                   background: isDarkMode ? '#1f1f1f' : '#1a73e8',
                   color: '#fff',
@@ -187,11 +146,7 @@ const AdminComments = () => {
           colorText: isDarkMode ? '#e6e6e6' : '#000000',
         },
         components: {
-          Card: {
-            headerBg: isDarkMode ? '#1f1f1f' : '#1a73e8',
-            headerFontSize: 18,
-            headerHeight: 48,
-          },
+          Card: { headerBg: isDarkMode ? '#1f1f1f' : '#1a73e8', headerFontSize: 18, headerHeight: 48 },
         },
       }}
     >

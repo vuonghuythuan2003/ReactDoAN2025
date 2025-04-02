@@ -13,7 +13,7 @@ const { TextArea } = Input;
 const Brand = () => {
   const dispatch = useDispatch();
   const { brands, filteredBrands, selectedBrand, loading, error, currentPage, pageSize, searchText } = useSelector((state) => state.brands);
-
+  const [initialLoading, setInitialLoading] = useState(true); // Thêm trạng thái initialLoading
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -24,7 +24,20 @@ const Brand = () => {
   const [initialImage, setInitialImage] = useState(null);
 
   useEffect(() => {
-    dispatch(fetchBrands());
+    const fetchInitialData = async () => {
+      try {
+        await dispatch(fetchBrands());
+      } catch (error) {
+        console.error('Error fetching brands:', error);
+        toast.error('Không thể tải danh sách thương hiệu!', { position: 'top-right', autoClose: 3000 });
+      } finally {
+        // Giả lập loading 3 giây
+        setTimeout(() => {
+          setInitialLoading(false);
+        }, 3000);
+      }
+    };
+    fetchInitialData();
   }, [dispatch]);
 
   useEffect(() => {
@@ -308,8 +321,8 @@ const Brand = () => {
           Quản lý thương hiệu
         </Title>
         <Card style={{ borderRadius: 8, background: '#fff', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
-          <Spin spinning={loading} tip="Đang tải dữ liệu...">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Spin spinning={initialLoading || loading} tip="Đang tải dữ liệu...">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Title level={4} style={{ margin: 0, color: '#333' }}>
                 Tổng số thương hiệu: {filteredBrands.length}
               </Title>
