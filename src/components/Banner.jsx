@@ -1,5 +1,6 @@
 import React from 'react';
 import { Carousel, Button } from 'react-bootstrap';
+import '../styles/Banner.scss'; // Thêm file CSS cho Banner
 
 const Banner = () => {
   const banners = [
@@ -34,7 +35,7 @@ const Banner = () => {
   ];
 
   return (
-    <Carousel fade interval={5000} pause="hover" className="banner-carousel">
+    <Carousel fade interval={3000} pause="hover" className="banner-carousel">
       {banners.map((banner) => (
         <Carousel.Item key={banner.id}>
           <div className="banner-overlay" />
@@ -42,14 +43,11 @@ const Banner = () => {
             className="d-block w-100 banner-image"
             src={banner.image}
             alt={banner.title}
-            onError={(e) => (e.target.src = 'https://picsum.photos/1920/600?random=1')}
+            onError={(e) => (e.target.src = 'https://picsum.photos/1200/400?random=1')} // Thu nhỏ ảnh placeholder
           />
           <Carousel.Caption className="banner-caption">
             <h3>{banner.title}</h3>
             <p>{banner.description}</p>
-            <Button variant="primary" href={banner.link} className="banner-button">
-              Xem ngay
-            </Button>
           </Carousel.Caption>
         </Carousel.Item>
       ))}

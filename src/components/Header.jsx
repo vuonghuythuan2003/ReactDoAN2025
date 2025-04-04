@@ -3,14 +3,14 @@ import { Container, Navbar, Nav } from 'react-bootstrap';
 import { FiPhone } from 'react-icons/fi';
 import { FaShoppingCart, FaUser } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux'; // Thêm useSelector để kiểm tra trạng thái đăng nhập
+import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { logout } from '../services/authService';
 import '../styles/Header.scss';
 
 const Header = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useSelector((state) => state.auth); // Lấy trạng thái đăng nhập từ Redux
+  const { isAuthenticated } = useSelector((state) => state.auth);
 
   const handleLogout = async () => {
     if (!isAuthenticated) {
@@ -25,6 +25,7 @@ const Header = () => {
       navigate('/login');
     } catch (error) {
       toast.error('Đăng xuất thất bại!', { position: 'top-right', autoClose: 3000 });
+      console.log(error);
     }
   };
 
@@ -33,7 +34,16 @@ const Header = () => {
       toast.warning('Vui lòng đăng nhập để sử dụng chức năng này!', { position: 'top-right', autoClose: 3000 });
       navigate('/login');
     } else {
-      handleLogout(); // Nếu đã đăng nhập, thực hiện đăng xuất
+      handleLogout();
+    }
+  };
+
+  const handleRestrictedClick = (path) => {
+    if (!isAuthenticated) {
+      toast.warning('Vui lòng đăng nhập để sử dụng chức năng này!', { position: 'top-right', autoClose: 3000 });
+      navigate('/login');
+    } else {
+      navigate(path);
     }
   };
 
@@ -49,13 +59,13 @@ const Header = () => {
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="mx-auto nav-links">
             <Nav.Link href="/">Về Xwatch</Nav.Link>
-            <Nav.Link href="#">Thương hiệu</Nav.Link>
-            <Nav.Link href="#">Đồng hồ nam</Nav.Link>
-            <Nav.Link href="#">Đồng hồ nữ</Nav.Link>
-            <Nav.Link href="#">Cặp đôi</Nav.Link>
-            <Nav.Link href="#">Sửa chữa</Nav.Link>
-            <Nav.Link href="#">Kiến thức</Nav.Link>
-            <Nav.Link href="#">Phụ kiện</Nav.Link>
+            <Nav.Link onClick={() => handleRestrictedClick('/brands')}>Thương hiệu</Nav.Link>
+            <Nav.Link href="/categories/1">Đồng hồ nam</Nav.Link> 
+            <Nav.Link href="/categories/2">Đồng hồ nữ</Nav.Link> 
+            <Nav.Link href="#">Cặp đôi</Nav.Link> {/* Tạm thời, có thể thay đổi */}
+            <Nav.Link onClick={handleRestrictedClick} href="#">Sửa chữa</Nav.Link>
+            <Nav.Link onClick={handleRestrictedClick}href="#">Kiến thức</Nav.Link>
+            <Nav.Link onClick={handleRestrictedClick} href="#">Phụ kiện</Nav.Link>
           </Nav>
 
           <div className="navbar-icons">
@@ -71,7 +81,7 @@ const Header = () => {
               <FaUser
                 className="icon"
                 onClick={handleUserClick}
-                style={{ cursor: 'pointer', opacity: isAuthenticated ? 1 : 0.5 }} // Giảm độ mờ nếu chưa đăng nhập
+                style={{ cursor: 'pointer', opacity: isAuthenticated ? 1 : 0.5 }}
                 title={isAuthenticated ? 'Đăng xuất' : 'Đăng nhập'}
               />
             </div>

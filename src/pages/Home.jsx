@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { BASE_URL } from '../api/index';
 import { Input, Spin } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Banner from '../components/Banner';
 import ProductList from '../components/ProductList';
 import ProductModal from '../components/ProductModal';
 import '../styles/Home.scss';
+import Banner from '../components/Banner';
+import '../styles/Banner.scss';
+
 
 const Home = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const [products, setProducts] = useState([]);

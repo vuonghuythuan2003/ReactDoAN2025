@@ -8,6 +8,7 @@ import dashboardReducer from '../reducers/DashboardSlice.js';
 import layoutReducer from '../reducers/LayoutSlice.js';
 import authReducer from '../reducers/AuthSlice';
 import commentReducer from '../reducers/CommentSlice'; 
+import cartReducer from '../reducers/CartSlice.js'; 
 
 export const store = configureStore({
   reducer: {
@@ -20,5 +21,12 @@ export const store = configureStore({
     layout: layoutReducer,
     auth: authReducer,
     comments: commentReducer,
+    cart: cartReducer,
   },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: ['cart/fetchCartItems/fulfilled'],
+      },
+    }),
 });

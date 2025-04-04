@@ -3,9 +3,9 @@ import { Container, Row, Col } from 'react-bootstrap';
 import { useSelector } from 'react-redux'; // Thêm useSelector
 import { useNavigate } from 'react-router-dom'; // Thêm useNavigate
 import { toast } from 'react-toastify'; // Thêm toast
-import '../styles/Footer.scss';
+import '../../styles/Footer.scss';
 
-const Footer = () => {
+const FooterUser = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useSelector((state) => state.auth); // Lấy trạng thái đăng nhập từ Redux
 
@@ -95,4 +95,4 @@ const Footer = () => {
   );
 };
 
-export default Footer;
+export default FooterUser;
