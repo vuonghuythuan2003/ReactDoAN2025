@@ -10,7 +10,6 @@ import ProductList from '../components/ProductList';
 import ProductModal from '../components/ProductModal';
 import '../styles/Home.scss';
 import Banner from '../components/Banner';
-import '../styles/Banner.scss';
 
 
 const Home = () => {

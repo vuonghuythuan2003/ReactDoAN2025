@@ -4,18 +4,25 @@ import { BASE_URL_USER } from '../../api/index';
 // Lấy danh sách sản phẩm trong giỏ hàng
 export const fetchCartItems = createAsyncThunk(
   'cart/fetchCartItems',
-  async (userId, { rejectWithValue }) => {
+  async (userId, { getState, rejectWithValue }) => {
+    const { auth } = getState();
+    const token = auth.token;
     try {
       console.log('Sending request to /cart/list with userId:', userId);
-      const response = await BASE_URL_USER.get(`/cart/list?userId=${userId}`);
+      const response = await BASE_URL_USER.get(`/cart/list?userId=${userId}`, {
+        headers: {
+          userId: userId.toString(),
+          Authorization: `Bearer ${token}`,
+        },
+      });
       console.log('Response from /cart/list:', response.data);
       const mappedItems = response.data.map(item => ({
         cartItemId: item.shoppingCartId,
         productId: item.productId,
         productName: item.productName,
         unitPrice: item.unitPrice,
-        quantity: item.orderQuantity,
-        productImage: item.image || null, // Sửa từ productImage thành image
+        orderQuantity: item.orderQuantity,
+        productImage: item.image || null,
       }));
       return mappedItems;
     } catch (error) {
@@ -28,17 +35,24 @@ export const fetchCartItems = createAsyncThunk(
 // Thêm sản phẩm vào giỏ hàng
 export const addToCart = createAsyncThunk(
   'cart/addToCart',
-  async ({ userId, requestDTO }, { rejectWithValue }) => {
+  async ({ userId, requestDTO }, { getState, rejectWithValue }) => {
+    const { auth } = getState();
+    const token = auth.token;
     try {
-      const response = await BASE_URL_USER.post(`/cart/add?userId=${userId}`, requestDTO);
+      const response = await BASE_URL_USER.post(`/cart/add?userId=${userId}`, requestDTO, {
+        headers: {
+          userId: userId.toString(),
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const newItem = response.data;
       return {
         cartItemId: newItem.shoppingCartId,
         productId: newItem.productId,
         productName: newItem.productName,
         unitPrice: newItem.unitPrice,
-        quantity: newItem.orderQuantity,
-        productImage: newItem.image || null, // Sửa từ productImage thành image
+        orderQuantity: newItem.orderQuantity,
+        productImage: newItem.image || null,
       };
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
@@ -49,17 +63,23 @@ export const addToCart = createAsyncThunk(
 // Cập nhật số lượng sản phẩm
 export const updateCartItem = createAsyncThunk(
   'cart/updateCartItem',
-  async ({ cartItemId, quantity }, { rejectWithValue }) => {
+  async ({ cartItemId, quantity }, { getState, rejectWithValue }) => {
+    const { auth } = getState();
+    const token = auth.token;
     try {
-      const response = await BASE_URL_USER.put(`/cart/items/${cartItemId}`, { quantity });
+      const response = await BASE_URL_USER.put(`/cart/items/${cartItemId}`, { quantity }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const updatedItem = response.data;
       return {
         cartItemId: updatedItem.shoppingCartId,
         productId: updatedItem.productId,
         productName: updatedItem.productName,
         unitPrice: updatedItem.unitPrice,
-        quantity: updatedItem.orderQuantity,
-        productImage: updatedItem.image || null, // Sửa từ productImage thành image
+        orderQuantity: updatedItem.orderQuantity,
+        productImage: updatedItem.image || null,
       };
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
@@ -70,10 +90,15 @@ export const updateCartItem = createAsyncThunk(
 // Xóa sản phẩm khỏi giỏ hàng
 export const removeCartItem = createAsyncThunk(
   'cart/removeCartItem',
-  async ({ userId, cartItemId }, { rejectWithValue }) => {
+  async ({ userId, cartItemId }, { getState, rejectWithValue }) => {
+    const { auth } = getState();
+    const token = auth.token;
     try {
       await BASE_URL_USER.delete(`/cart/${cartItemId}`, {
-        headers: { userId: userId.toString() },
+        headers: {
+          userId: userId.toString(),
+          Authorization: `Bearer ${token}`,
+        },
       });
       return cartItemId;
     } catch (error) {
@@ -85,13 +110,76 @@ export const removeCartItem = createAsyncThunk(
 // Xóa toàn bộ giỏ hàng
 export const clearCart = createAsyncThunk(
   'cart/clearCart',
-  async (userId, { rejectWithValue }) => {
+  async (userId, { getState, rejectWithValue }) => {
+    const { auth } = getState();
+    const token = auth.token;
     try {
       await BASE_URL_USER.delete(`/cart/clear`, {
-        headers: { userId: userId.toString() },
+        headers: {
+          userId: userId.toString(),
+          Authorization: `Bearer ${token}`,
+        },
       });
       return;
     } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+// Thanh toán giỏ hàng
+export const checkoutCart = createAsyncThunk(
+  'cart/checkoutCart',
+  async ({ userId, receiveAddress, receiveName, receivePhone, note }, { getState, rejectWithValue }) => {
+    const { auth } = getState();
+    const token = auth.token;
+    try {
+      const response = await BASE_URL_USER.post(
+        `/cart/checkout?userId=${userId}&receiveAddress=${encodeURIComponent(receiveAddress)}&receiveName=${encodeURIComponent(receiveName)}&receivePhone=${encodeURIComponent(receivePhone)}¬e=${encodeURIComponent(note || '')}`,
+        {},
+        {
+          headers: {
+            userId: userId.toString(),
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      // Backend trả về redirect URL
+      if (response.data && response.data.startsWith('redirect:')) {
+        const redirectUrl = response.data.replace('redirect:', '');
+        return redirectUrl; // Trả về URL để redirect
+      }
+      throw new Error('Không nhận được URL thanh toán từ server');
+    } catch (error) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+// Reset giỏ hàng sau khi thanh toán thành công
+export const resetCartAfterCheckout = createAsyncThunk(
+  'cart/resetCartAfterCheckout',
+  async (userId, { getState, rejectWithValue }) => {
+    const { auth } = getState();
+    const token = auth.token;
+    try {
+      const response = await BASE_URL_USER.get(`/cart/list?userId=${userId}`, {
+        headers: {
+          userId: userId.toString(),
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const mappedItems = response.data.map(item => ({
+        cartItemId: item.shoppingCartId,
+        productId: item.productId,
+        productName: item.productName,
+        unitPrice: item.unitPrice,
+        orderQuantity: item.orderQuantity,
+        productImage: item.image || null,
+      }));
+      return mappedItems; // Trả về danh sách giỏ hàng (sẽ rỗng vì backend đã xóa)
+    } catch (error) {
+      console.error('Error resetting cart after checkout:', error.response?.data || error.message);
       return rejectWithValue(error.response?.data || error.message);
     }
   }
@@ -104,6 +192,7 @@ const cartSlice = createSlice({
     totalItems: 0,
     loading: false,
     error: null,
+    checkoutRedirectUrl: null,
   },
   reducers: {
     resetCart: (state) => {
@@ -111,6 +200,10 @@ const cartSlice = createSlice({
       state.totalItems = 0;
       state.loading = false;
       state.error = null;
+      state.checkoutRedirectUrl = null;
+    },
+    clearCheckoutRedirect: (state) => {
+      state.checkoutRedirectUrl = null;
     },
   },
   extraReducers: (builder) => {
@@ -122,7 +215,7 @@ const cartSlice = createSlice({
       .addCase(fetchCartItems.fulfilled, (state, action) => {
         state.loading = false;
         state.items = action.payload;
-        state.totalItems = action.payload.reduce((total, item) => total + item.quantity, 0);
+        state.totalItems = action.payload.reduce((total, item) => total + item.orderQuantity, 0);
       })
       .addCase(fetchCartItems.rejected, (state, action) => {
         state.loading = false;
@@ -137,11 +230,11 @@ const cartSlice = createSlice({
         const newItem = action.payload;
         const existingItem = state.items.find((item) => item.productId === newItem.productId);
         if (existingItem) {
-          existingItem.quantity = newItem.quantity;
+          existingItem.orderQuantity = newItem.orderQuantity;
         } else {
           state.items.push(newItem);
         }
-        state.totalItems = state.items.reduce((total, item) => total + item.quantity, 0);
+        state.totalItems = state.items.reduce((total, item) => total + item.orderQuantity, 0);
       })
       .addCase(addToCart.rejected, (state, action) => {
         state.loading = false;
@@ -158,7 +251,7 @@ const cartSlice = createSlice({
         if (index !== -1) {
           state.items[index] = updatedItem;
         }
-        state.totalItems = state.items.reduce((total, item) => total + item.quantity, 0);
+        state.totalItems = state.items.reduce((total, item) => total + item.orderQuantity, 0);
       })
       .addCase(updateCartItem.rejected, (state, action) => {
         state.loading = false;
@@ -171,7 +264,7 @@ const cartSlice = createSlice({
       .addCase(removeCartItem.fulfilled, (state, action) => {
         state.loading = false;
         state.items = state.items.filter((item) => item.cartItemId !== action.payload);
-        state.totalItems = state.items.reduce((total, item) => total + item.quantity, 0);
+        state.totalItems = state.items.reduce((total, item) => total + item.orderQuantity, 0);
       })
       .addCase(removeCartItem.rejected, (state, action) => {
         state.loading = false;
@@ -189,9 +282,36 @@ const cartSlice = createSlice({
       .addCase(clearCart.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      .addCase(checkoutCart.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        state.checkoutRedirectUrl = null;
+      })
+      .addCase(checkoutCart.fulfilled, (state, action) => {
+        state.loading = false;
+        state.checkoutRedirectUrl = action.payload;
+      })
+      .addCase(checkoutCart.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.checkoutRedirectUrl = null;
+      })
+      .addCase(resetCartAfterCheckout.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(resetCartAfterCheckout.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload;
+        state.totalItems = action.payload.reduce((total, item) => total + item.orderQuantity, 0);
+      })
+      .addCase(resetCartAfterCheckout.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });
 
-export const { resetCart } = cartSlice.actions;
-export default cartSlice.reducer;
+export const { resetCart, clearCheckoutRedirect } = cartSlice.actions;
+export default cartSlice.reducer
