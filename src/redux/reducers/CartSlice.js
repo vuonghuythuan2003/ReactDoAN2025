@@ -11,7 +11,6 @@ export const fetchCartItems = createAsyncThunk(
       console.log('Sending request to /cart/list with userId:', userId);
       const response = await BASE_URL_USER.get(`/cart/list?userId=${userId}`, {
         headers: {
-          userId: userId.toString(),
           Authorization: `Bearer ${token}`,
         },
       });
@@ -41,7 +40,6 @@ export const addToCart = createAsyncThunk(
     try {
       const response = await BASE_URL_USER.post(`/cart/add?userId=${userId}`, requestDTO, {
         headers: {
-          userId: userId.toString(),
           Authorization: `Bearer ${token}`,
         },
       });
@@ -135,52 +133,20 @@ export const checkoutCart = createAsyncThunk(
     const token = auth.token;
     try {
       const response = await BASE_URL_USER.post(
-        `/cart/checkout?userId=${userId}&receiveAddress=${encodeURIComponent(receiveAddress)}&receiveName=${encodeURIComponent(receiveName)}&receivePhone=${encodeURIComponent(receivePhone)}¬e=${encodeURIComponent(note || '')}`,
+        `/cart/checkout?userId=${userId}&receiveAddress=${encodeURIComponent(receiveAddress)}&receiveName=${encodeURIComponent(receiveName)}&receivePhone=${encodeURIComponent(receivePhone)}${note ? `&note=${encodeURIComponent(note)}` : ''}`,
         {},
         {
           headers: {
-            userId: userId.toString(),
             Authorization: `Bearer ${token}`,
           },
         }
       );
-      // Backend trả về redirect URL
-      if (response.data && response.data.startsWith('redirect:')) {
-        const redirectUrl = response.data.replace('redirect:', '');
-        return redirectUrl; // Trả về URL để redirect
+      if (response.data && response.data.redirectUrl) {
+        return response.data;
       }
       throw new Error('Không nhận được URL thanh toán từ server');
     } catch (error) {
-      return rejectWithValue(error.response?.data || error.message);
-    }
-  }
-);
-
-// Reset giỏ hàng sau khi thanh toán thành công
-export const resetCartAfterCheckout = createAsyncThunk(
-  'cart/resetCartAfterCheckout',
-  async (userId, { getState, rejectWithValue }) => {
-    const { auth } = getState();
-    const token = auth.token;
-    try {
-      const response = await BASE_URL_USER.get(`/cart/list?userId=${userId}`, {
-        headers: {
-          userId: userId.toString(),
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const mappedItems = response.data.map(item => ({
-        cartItemId: item.shoppingCartId,
-        productId: item.productId,
-        productName: item.productName,
-        unitPrice: item.unitPrice,
-        orderQuantity: item.orderQuantity,
-        productImage: item.image || null,
-      }));
-      return mappedItems; // Trả về danh sách giỏ hàng (sẽ rỗng vì backend đã xóa)
-    } catch (error) {
-      console.error('Error resetting cart after checkout:', error.response?.data || error.message);
-      return rejectWithValue(error.response?.data || error.message);
+      return rejectWithValue(error.response?.data?.message || error.message);
     }
   }
 );
@@ -290,28 +256,15 @@ const cartSlice = createSlice({
       })
       .addCase(checkoutCart.fulfilled, (state, action) => {
         state.loading = false;
-        state.checkoutRedirectUrl = action.payload;
+        state.checkoutRedirectUrl = action.payload.redirectUrl;
       })
       .addCase(checkoutCart.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
         state.checkoutRedirectUrl = null;
-      })
-      .addCase(resetCartAfterCheckout.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(resetCartAfterCheckout.fulfilled, (state, action) => {
-        state.loading = false;
-        state.items = action.payload;
-        state.totalItems = action.payload.reduce((total, item) => total + item.orderQuantity, 0);
-      })
-      .addCase(resetCartAfterCheckout.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
       });
   },
 });
 
 export const { resetCart, clearCheckoutRedirect } = cartSlice.actions;
-export default cartSlice.reducer
+export default cartSlice.reducer;

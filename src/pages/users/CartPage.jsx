@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import { fetchCartItems, updateCartItem, removeCartItem, clearCart, checkoutCart, clearCheckoutRedirect } from '../../redux/reducers/CartSlice';
 import HeaderUser from './HeaderUser';
 import FooterUser from './FooterUser';
-import { Card, Button, Form, Input, Row, Col, Typography, Space, Divider, Spin } from 'antd';
+import { Card, Button, Form, Input, Row, Col, Typography, Space, Divider, Spin, Modal } from 'antd';
 
 const { Title, Text } = Typography;
 
@@ -13,10 +13,11 @@ const CartPage = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const location = useLocation();
-    const { isAuthenticated, user } = useSelector((state) => state.auth);
+    const { isAuthenticated, user, token } = useSelector((state) => state.auth);
     const { items, loading, error, totalItems, checkoutRedirectUrl } = useSelector((state) => state.cart);
     const [form] = Form.useForm();
     const [paymentLoading, setPaymentLoading] = useState(false);
+    const [orderInfo, setOrderInfo] = useState(null);
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -31,6 +32,7 @@ const CartPage = () => {
 
     useEffect(() => {
         if (checkoutRedirectUrl) {
+            console.log('Redirecting to PayPal with URL:', checkoutRedirectUrl);
             window.location.href = checkoutRedirectUrl;
         }
     }, [checkoutRedirectUrl]);
@@ -39,24 +41,59 @@ const CartPage = () => {
         const searchParams = new URLSearchParams(location.search);
         const paymentId = searchParams.get('paymentId');
         const payerId = searchParams.get('PayerID');
+        const userId = searchParams.get('userId');
+    
+    
+        const receiveAddress = searchParams.get('receiveAddress');
+        const receiveName = searchParams.get('receiveName');
+        const receivePhone = searchParams.get('receivePhone');
+        const note = searchParams.get('note');
+    
         if (location.pathname.includes('/success') && paymentId && payerId) {
-            dispatch(clearCart(user.userId))
-                .unwrap()
-                .then(() => {
-                    toast.success('Thanh toán thành công!', { position: 'top-right', autoClose: 3000 });
-                    navigate('/user');
+            fetch(`http://localhost:8080/api/v1/user/cart/checkout/success?paymentId=${paymentId}&PayerID=${payerId}&userId=${userId}&receiveAddress=${encodeURIComponent(receiveAddress)}&receiveName=${encodeURIComponent(receiveName)}&receivePhone=${encodeURIComponent(receivePhone)}${note ? `&note=${encodeURIComponent(note)}` : ''}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message.includes('Thanh toán thành công')) {
+                        const orderId = data.message.split('Mã đơn hàng: ')[1] || 'N/A';
+                        const totalPrice = calculateTotalPrice();
+                        setOrderInfo({ orderId, totalPrice });
+                        toast.success('Thanh toán thành công!', { position: 'top-right', autoClose: 3000 });
+                        dispatch(clearCheckoutRedirect());
+                        dispatch(clearCart(user.userId));
+                    } else {
+                        throw new Error(data.message || 'Thanh toán không được phê duyệt!');
+                    }
                 })
-                .catch((error) => {
-                    toast.error('Lỗi khi xóa giỏ hàng sau thanh toán!', { position: 'top-right', autoClose: 3000 });
-                    console.error('Lỗi:', error);
+                .catch(error => {
+                    toast.error(error.message || 'Xác nhận thanh toán thất bại!', { position: 'top-right', autoClose: 3000 });
+                    console.error('Lỗi khi xác nhận thanh toán:', error);
+                    navigate('/user/cart');
                 });
-            dispatch(clearCheckoutRedirect());
         } else if (location.pathname.includes('/cancel')) {
-            toast.info('Thanh toán đã bị hủy!', { position: 'top-right', autoClose: 3000 });
-            dispatch(clearCheckoutRedirect());
-            navigate('/user/cart');
+            fetch(`http://localhost:8080/api/v1/user/cart/checkout/cancel`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            })
+                .then(response => response.json())
+                .then(data => {
+                    toast.info(data.message || 'Thanh toán đã bị hủy!', { position: 'top-right', autoClose: 3000 });
+                    dispatch(clearCheckoutRedirect());
+                    navigate('/user/cart');
+                })
+                .catch(error => {
+                    toast.error('Lỗi khi xử lý hủy thanh toán!', { position: 'top-right', autoClose: 3000 });
+                    console.error('Lỗi khi xử lý hủy thanh toán:', error);
+                    navigate('/user/cart');
+                });
         }
-    }, [location, dispatch, navigate, user]);
+    }, [location, dispatch, navigate, user, token]);
 
     const handleQuantityChange = (cartItemId, quantity) => {
         if (quantity < 1) return;
@@ -98,7 +135,7 @@ const CartPage = () => {
         navigate('/login');
     };
 
-    const handleCheckout = (values) => {
+    const handleCheckout = async () => {
         if (!isAuthenticated || !user?.userId) return redirectToLogin();
 
         if (items.length === 0) {
@@ -106,30 +143,45 @@ const CartPage = () => {
             return;
         }
 
-        setPaymentLoading(true);
-        dispatch(checkoutCart({
-            userId: user.userId,
-            receiveAddress: values.receiveAddress,
-            receiveName: values.receiveName,
-            receivePhone: values.receivePhone,
-            note: values.note || 'Không có ghi chú',
-        }))
-            .unwrap()
-            .then((redirectUrl) => {
-                window.location.href = redirectUrl;
-            })
-            .catch((error) => {
-                const errorMessage = error || 'Khởi tạo thanh toán thất bại!';
-                toast.error(errorMessage, { position: 'top-right', autoClose: 3000 });
-                console.error('Lỗi khi khởi tạo thanh toán:', error);
-            })
-            .finally(() => {
-                setPaymentLoading(false);
-            });
+        try {
+            const values = await form.validateFields();
+            setPaymentLoading(true);
+            dispatch(checkoutCart({
+                userId: user.userId,
+                receiveAddress: values.receiveAddress,
+                receiveName: values.receiveName,
+                receivePhone: values.receivePhone,
+                note: values.note || 'Không có ghi chú',
+            }))
+                .unwrap()
+                .then((response) => {
+                    if (response.redirectUrl) {
+                        window.location.href = response.redirectUrl;
+                    } else {
+                        throw new Error('Không nhận được URL thanh toán từ server');
+                    }
+                })
+                .catch((error) => {
+                    const errorMessage = error.message || 'Khởi tạo thanh toán thất bại!';
+                    toast.error(errorMessage, { position: 'top-right', autoClose: 3000 });
+                    console.error('Lỗi khi khởi tạo thanh toán:', error);
+                })
+                .finally(() => {
+                    setPaymentLoading(false);
+                });
+        } catch (error) {
+            console.error('Validation failed:', error);
+        }
     };
 
     const calculateTotalPrice = () => {
         return items.reduce((total, item) => total + (item.unitPrice || 0) * (item.orderQuantity || 0), 0);
+    };
+
+    const calculateTotalPriceInUSD = () => {
+        const totalVND = calculateTotalPrice();
+        const exchangeRate = 1 / 24000;
+        return (totalVND * exchangeRate).toFixed(2);
     };
 
     if (loading || paymentLoading) {
@@ -220,6 +272,9 @@ const CartPage = () => {
                                     <Title level={3} style={{ margin: 0, color: '#2c3e50' }}>
                                         Tổng tiền: {calculateTotalPrice().toLocaleString('vi-VN')} VNĐ
                                     </Title>
+                                    <Text style={{ color: '#6c757d' }}>
+                                        (~${calculateTotalPriceInUSD()} USD)
+                                    </Text>
                                     <Button type="primary" danger onClick={handleClearCart} style={{ borderRadius: '5px' }}>
                                         Xóa toàn bộ giỏ hàng
                                     </Button>
@@ -230,6 +285,9 @@ const CartPage = () => {
                             title={<Title level={3} style={{ margin: 0, color: '#2c3e50' }}>Thông tin giao hàng</Title>}
                             style={{ borderRadius: '10px', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)' }}
                         >
+                            <Text style={{ color: '#ff4d4f', display: 'block', marginBottom: '10px' }}>
+                                Lưu ý: Thanh toán sẽ được thực hiện bằng USD (tỷ giá tham khảo: 1 USD = 24,000 VNĐ).
+                            </Text>
                             <Form
                                 form={form}
                                 layout="vertical"
@@ -249,9 +307,10 @@ const CartPage = () => {
                                     rules={[
                                         { required: true, message: 'Vui lòng nhập số điện thoại!' },
                                         { pattern: /^\d{10,11}$/, message: 'Số điện thoại phải có 10-11 chữ số!' },
+                                        { max: 15, message: 'Số điện thoại không được dài quá 15 ký tự!' },
                                     ]}
                                 >
-                                    <Input placeholder="Nhập số điện thoại" />
+                                    <Input placeholder="Nhập số điện thoại" maxLength={15} />
                                 </Form.Item>
                                 <Form.Item
                                     label="Địa chỉ nhận hàng"
@@ -274,6 +333,33 @@ const CartPage = () => {
                 )}
             </div>
             <FooterUser />
+
+            <Modal
+                title="Thanh toán thành công!"
+                open={!!orderInfo}
+                onOk={() => {
+                    setOrderInfo(null);
+                    navigate('/user/history');
+                }}
+                onCancel={() => {
+                    setOrderInfo(null);
+                    navigate('/user');
+                }}
+                okText="Xem đơn hàng"
+                cancelText="Đóng"
+            >
+                {orderInfo && (
+                    <div>
+                        <Text strong>Mã đơn hàng:</Text> <Text>{orderInfo.orderId || 'N/A'}</Text>
+                        <br />
+                        <Text strong>Tổng tiền:</Text> <Text>{orderInfo.totalPrice.toLocaleString('vi-VN')} VNĐ (~${calculateTotalPriceInUSD()} USD)</Text>
+                        <br />
+                        <Text style={{ color: '#ff4d4f' }}>
+                            Vui lòng kiểm tra email hoặc trang quản lý đơn hàng để xem chi tiết.
+                        </Text>
+                    </div>
+                )}
+            </Modal>
         </div>
     );
 };
