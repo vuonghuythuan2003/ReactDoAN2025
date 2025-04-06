@@ -9,7 +9,7 @@ import layoutReducer from '../reducers/LayoutSlice.js';
 import authReducer from '../reducers/AuthSlice';
 import commentReducer from '../reducers/CommentSlice'; 
 import cartReducer from '../reducers/CartSlice.js'; 
-
+import orderUserReducer from '../reducers/OrderSliceUser.js'; // Dành cho user
 export const store = configureStore({
   reducer: {
     brands: brandReducer,
@@ -22,6 +22,7 @@ export const store = configureStore({
     auth: authReducer,
     comments: commentReducer,
     cart: cartReducer,
+    userOrders: orderUserReducer, 
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

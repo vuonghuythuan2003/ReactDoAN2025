@@ -7,6 +7,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
 import { logout } from '../../services/authService';
 import { fetchCartItems, resetCart } from '../../redux/reducers/CartSlice';
+import { resetUserOrders } from '../../redux/reducers/OrderSliceUser'; // Thêm resetUserOrders
 import '../../styles/Home.scss';
 
 const HeaderUser = () => {
@@ -15,7 +16,6 @@ const HeaderUser = () => {
     const { isAuthenticated, user } = useSelector((state) => state.auth);
     const { totalItems, loading, hasFetchedCart } = useSelector((state) => state.cart);
 
-    // Fetch cart items only once when userId is available and cart hasn’t been fetched yet
     useEffect(() => {
         if (isAuthenticated && user?.userId && !hasFetchedCart && !loading) {
             dispatch(fetchCartItems(user.userId));
@@ -32,6 +32,7 @@ const HeaderUser = () => {
         try {
             await logout();
             dispatch(resetCart());
+            dispatch(resetUserOrders()); // Reset user orders khi logout
             toast.success('Đăng xuất thành công!', { position: 'top-right', autoClose: 3000 });
             navigate('/login');
         } catch (error) {
@@ -80,7 +81,7 @@ const HeaderUser = () => {
                         <Nav.Link href="/user/categories/1">Đồng hồ nam</Nav.Link>
                         <Nav.Link href="/user/categories/2">Đồng hồ nữ</Nav.Link>
                         <Nav.Link href="/user/categories/3">Cặp đôi</Nav.Link>
-                        <Nav.Link onClick={() => handleRestrictedClick('/user/repair')}>Sửa chữa</Nav.Link>
+                        <Nav.Link onClick={() => handleRestrictedClick('/user/history')}>Lịch sử mua hàng</Nav.Link>
                         <Nav.Link onClick={() => handleRestrictedClick('/user/knowledge')}>Kiến thức</Nav.Link>
                         <Nav.Link onClick={() => handleRestrictedClick('/user/accessories')}>Phụ kiện</Nav.Link>
                     </Nav>

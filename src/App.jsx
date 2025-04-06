@@ -24,8 +24,8 @@ import BrandsPage from './components/BrandsPage.jsx';
 import BrandProductsPage from './components/BrandProductsPage.jsx';
 import CategoryProductsPageUser from './components/CategoryProductsPageUser.jsx';
 import CartPage from './pages/users/CartPage.jsx';
-import UserHistory from './components/UserHistory.jsx';
 import axios from 'axios'; // Thêm axios để gọi API
+import OrderHistoryPage from './pages/users/OrderHistoryPage.jsx';
 
 // Component CheckoutSuccess
 const CheckoutSuccess = () => {
@@ -188,7 +188,7 @@ function App() {
                         path="history"
                         element={
                             <PrivateRoute requiredRole="USER">
-                                <UserHistory />
+                                <OrderHistoryPage />
                             </PrivateRoute>
                         }
                     />
