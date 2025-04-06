@@ -1,13 +1,14 @@
+// File: src/redux/reducers/OrderSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { BASE_URL_ADMIN, getToken } from '../../api/index'; // Import BASE_URL_ADMIN và getToken
+import { BASE_URL_ADMIN, getToken } from '../../api/index';
 
 // Action bất đồng bộ để lấy tất cả đơn hàng
 export const fetchAllOrders = createAsyncThunk('orders/fetchAllOrders', async (_, { rejectWithValue }) => {
   try {
-    const token = getToken(); // Lấy token từ cookies
+    const token = getToken();
     const response = await BASE_URL_ADMIN.get('/orders', {
       headers: {
-        Authorization: `Bearer ${token}`, // Thêm token vào header
+        Authorization: `Bearer ${token}`,
       },
     });
     return response.data.content || response.data;
@@ -52,7 +53,7 @@ export const updateOrderStatus = createAsyncThunk('orders/updateOrderStatus', as
     const token = getToken();
     const response = await BASE_URL_ADMIN.put(
       `/orders/${orderId}/status`,
-      { status },
+      status, // Gửi trực tiếp chuỗi status thay vì { status }
       {
         headers: {
           'Content-Type': 'application/json',

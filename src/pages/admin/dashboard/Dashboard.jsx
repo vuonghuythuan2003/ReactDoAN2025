@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'; // Chỉ import các hook cần thiết
+// File: src/pages/admin/Dashboard.jsx
+import { useEffect, useState } from 'react';
 import { Card, Col, Row, Typography, Spin, Table, DatePicker, ConfigProvider, theme } from 'antd';
-import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { toast } from 'react-toastify';
 import moment from 'moment';
 import { useOutletContext } from 'react-router-dom';
@@ -16,13 +17,14 @@ const { useToken } = theme;
 const Dashboard = () => {
   const { isDarkMode } = useOutletContext();
   const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
   const {
     totalUsers,
     newUsersThisMonth,
     topSpendingCustomers,
     revenueData,
+    revenueOverTime,
     bestSellerProducts,
-    mostLikedProducts,
     totalInvoices,
     trafficData,
     browserStats,
@@ -32,8 +34,8 @@ const Dashboard = () => {
     to,
   } = useSelector((state) => state.dashboard);
 
-  const defaultFrom = moment('2025-02-01T00:00:00');
-  const defaultTo = moment('2025-02-27T23:59:59');
+  const defaultFrom = moment().subtract(1, 'years');
+  const defaultTo = moment();
   const [dateRange, setLocalDateRange] = useState([defaultFrom, defaultTo]);
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -107,16 +109,20 @@ const Dashboard = () => {
     },
   ];
 
-  const mostLikedColumns = [
-    { title: 'Tên Sản Phẩm', dataIndex: 'productName', key: 'productName' },
-    { title: 'Số Lượt Thích', dataIndex: 'likeCount', key: 'likeCount' },
-  ];
-
   const CustomComponent = () => {
     const { token } = useToken();
     return (
       <div style={{ padding: token.paddingLG, background: isDarkMode ? token.colorBgBase : '#f0f2f5' }}>
         <Spin spinning={initialLoading || loading} tip="Đang tải dữ liệu..." size="large">
+          {/* Hiển thị lời chào cá nhân hóa */}
+          {user?.username && (
+            <div style={{ textAlign: 'center', marginBottom: token.marginLG }}>
+              <Title level={2} style={{ color: isDarkMode ? '#e6e6e6' : '#333' }}>
+                Xin chào, {user.username}!
+              </Title>
+            </div>
+          )}
+
           <Row style={{ marginBottom: token.marginLG }}>
             <Col>
               <RangePicker
@@ -178,6 +184,83 @@ const Dashboard = () => {
                   {totalInvoices.toLocaleString()}
                 </Title>
                 <p style={{ margin: 0, fontSize: 16, color: '#fff' }}>Tổng số hóa đơn</p>
+              </Card>
+            </Col>
+          </Row>
+
+          {/* Doanh thu theo thời gian - Biểu đồ đường */}
+          <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
+            <Col xs={24}>
+              <Card
+                title="Doanh thu theo thời gian"
+                style={{ borderRadius: token.borderRadiusLG, boxShadow: token.boxShadow }}
+                styles={{
+                  header: {
+                    background: isDarkMode ? '#1f1f1f' : '#1a73e8',
+                    color: '#fff',
+                    borderTopLeftRadius: token.borderRadiusLG,
+                    borderTopRightRadius: token.borderRadiusLG,
+                  },
+                }}
+                hoverable
+              >
+                {revenueOverTime.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={revenueOverTime} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#444' : '#d9d9d9'} />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(date) => new Date(date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                        stroke={isDarkMode ? '#e6e6e6' : '#000'}
+                      />
+                      <YAxis stroke={isDarkMode ? '#e6e6e6' : '#000'} />
+                      <Tooltip
+                        formatter={(value) => `${value.toLocaleString('vi-VN')} VNĐ`}
+                        labelFormatter={(label) => new Date(label).toLocaleDateString('vi-VN')}
+                        contentStyle={{ backgroundColor: isDarkMode ? '#2f2f2f' : '#fff', color: isDarkMode ? '#e6e6e6' : '#000' }}
+                      />
+                      <Line type="monotone" dataKey="totalRevenue" stroke="#fa8c16" activeDot={{ r: 8 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p>Không có dữ liệu để hiển thị</p>
+                )}
+              </Card>
+            </Col>
+          </Row>
+
+          {/* Doanh thu theo danh mục */}
+          <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
+            <Col xs={24}>
+              <Card
+                title="Doanh thu theo danh mục"
+                style={{ borderRadius: token.borderRadiusLG, boxShadow: token.boxShadow }}
+                styles={{
+                  header: {
+                    background: isDarkMode ? '#1f1f1f' : '#1a73e8',
+                    color: '#fff',
+                    borderTopLeftRadius: token.borderRadiusLG,
+                    borderTopRightRadius: token.borderRadiusLG,
+                  },
+                }}
+                hoverable
+              >
+                {revenueData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={revenueData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#444' : '#d9d9d9'} />
+                      <XAxis dataKey="categoryName" stroke={isDarkMode ? '#e6e6e6' : '#000'} />
+                      <YAxis stroke={isDarkMode ? '#e6e6e6' : '#000'} />
+                      <Tooltip
+                        formatter={(value) => `${value.toLocaleString('vi-VN')} VNĐ`}
+                        contentStyle={{ backgroundColor: isDarkMode ? '#2f2f2f' : '#fff', color: isDarkMode ? '#e6e6e6' : '#000' }}
+                      />
+                      <Bar dataKey="totalRevenue" fill="#fa8c16" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p>Không có dữ liệu để hiển thị</p>
+                )}
               </Card>
             </Col>
           </Row>
@@ -267,68 +350,6 @@ const Dashboard = () => {
                   bordered
                   style={{ borderRadius: token.borderRadiusLG, overflow: 'hidden' }}
                 />
-              </Card>
-            </Col>
-          </Row>
-
-          <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
-            <Col xs={24}>
-              <Card
-                title="Sản phẩm được yêu thích nhất"
-                style={{ borderRadius: token.borderRadiusLG, boxShadow: token.boxShadow }}
-                styles={{
-                  header: {
-                    background: isDarkMode ? '#1f1f1f' : '#1a73e8',
-                    color: '#fff',
-                    borderTopLeftRadius: token.borderRadiusLG,
-                    borderTopRightRadius: token.borderRadiusLG,
-                  },
-                }}
-                hoverable
-              >
-                <Table
-                  dataSource={mostLikedProducts}
-                  columns={mostLikedColumns}
-                  rowKey="productId"
-                  pagination={{ pageSize: 5 }}
-                  bordered
-                  style={{ borderRadius: token.borderRadiusLG, overflow: 'hidden' }}
-                />
-              </Card>
-            </Col>
-          </Row>
-
-          <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
-            <Col xs={24}>
-              <Card
-                title="Doanh thu theo danh mục"
-                style={{ borderRadius: token.borderRadiusLG, boxShadow: token.boxShadow }}
-                styles={{
-                  header: {
-                    background: isDarkMode ? '#1f1f1f' : '#1a73e8',
-                    color: '#fff',
-                    borderTopLeftRadius: token.borderRadiusLG,
-                    borderTopRightRadius: token.borderRadiusLG,
-                  },
-                }}
-                hoverable
-              >
-                {revenueData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={revenueData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#444' : '#d9d9d9'} />
-                      <XAxis dataKey="categoryName" stroke={isDarkMode ? '#e6e6e6' : '#000'} />
-                      <YAxis stroke={isDarkMode ? '#e6e6e6' : '#000'} />
-                      <Tooltip
-                        formatter={(value) => `${value.toLocaleString('vi-VN')} VNĐ`}
-                        contentStyle={{ backgroundColor: isDarkMode ? '#2f2f2f' : '#fff', color: isDarkMode ? '#e6e6e6' : '#000' }}
-                      />
-                      <Bar dataKey="totalRevenue" fill="#fa8c16" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p>Không có dữ liệu để hiển thị</p>
-                )}
               </Card>
             </Col>
           </Row>

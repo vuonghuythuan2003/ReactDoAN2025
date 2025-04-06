@@ -26,6 +26,8 @@ import CategoryProductsPageUser from './components/CategoryProductsPageUser.jsx'
 import CartPage from './pages/users/CartPage.jsx';
 import axios from 'axios'; // Thêm axios để gọi API
 import OrderHistoryPage from './pages/users/OrderHistoryPage.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
 
 // Component CheckoutSuccess
 const CheckoutSuccess = () => {
@@ -126,6 +128,8 @@ function App() {
 
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} /> 
+                <Route path="/reset-password" element={<ResetPassword />} /> 
 
                 <Route path="/user">
                     <Route

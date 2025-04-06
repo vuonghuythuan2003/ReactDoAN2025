@@ -1,3 +1,4 @@
+// File: src/redux/reducers/DashboardSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { BASE_URL_ADMIN, getToken } from '../../api/index'; 
 
@@ -23,15 +24,15 @@ export const fetchDashboardData = createAsyncThunk(
       const revenueResponse = await BASE_URL_ADMIN.get('/reports/revenue-by-category');
       const revenueData = revenueResponse.data || [];
 
+      const revenueOverTimeResponse = await BASE_URL_ADMIN.get('/reports/revenue-over-time', {
+        params: { from, to },
+      });
+      const revenueOverTime = revenueOverTimeResponse.data || [];
+
       const bestSellerResponse = await BASE_URL_ADMIN.get('/reports/best-seller-products', {
         params: { from, to },
       });
       const bestSellerProducts = bestSellerResponse.data || [];
-
-      const mostLikedResponse = await BASE_URL_ADMIN.get('/reports/most-liked-products', {
-        params: { from, to },
-      });
-      const mostLikedProducts = mostLikedResponse.data || [];
 
       const invoicesResponse = await BASE_URL_ADMIN.get('/invoices-over-time', {
         params: { from, to },
@@ -55,8 +56,8 @@ export const fetchDashboardData = createAsyncThunk(
         newUsersThisMonth,
         topSpendingCustomers,
         revenueData,
+        revenueOverTime,
         bestSellerProducts,
-        mostLikedProducts,
         totalInvoices,
         trafficData,
         browserStats,
@@ -74,15 +75,15 @@ const dashboardSlice = createSlice({
     newUsersThisMonth: [],
     topSpendingCustomers: [],
     revenueData: [],
+    revenueOverTime: [],
     bestSellerProducts: [],
-    mostLikedProducts: [],
     totalInvoices: 0,
     trafficData: [],
     browserStats: [],
     loading: false,
     error: null,
-    from: new Date('2025-02-01T00:00:00').toISOString(),
-    to: new Date('2025-02-27T23:59:59').toISOString(),
+    from: new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString(), // 1 năm trước
+    to: new Date().toISOString(), // Đến ngày hiện tại
   },
   reducers: {
     setDateRange: (state, action) => {
@@ -102,8 +103,8 @@ const dashboardSlice = createSlice({
         state.newUsersThisMonth = action.payload.newUsersThisMonth;
         state.topSpendingCustomers = action.payload.topSpendingCustomers;
         state.revenueData = action.payload.revenueData;
+        state.revenueOverTime = action.payload.revenueOverTime;
         state.bestSellerProducts = action.payload.bestSellerProducts;
-        state.mostLikedProducts = action.payload.mostLikedProducts;
         state.totalInvoices = action.payload.totalInvoices;
         state.trafficData = action.payload.trafficData;
         state.browserStats = action.payload.browserStats;

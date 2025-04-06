@@ -7,7 +7,7 @@ import { clearCurrentUser } from '../redux/reducers/UserSlice';
 import Cookies from 'js-cookie';
 import { toast } from 'react-toastify';
 import styles from '../styles/AdminLayout.module.scss';
-import { logout } from '../services/authService'; // Import hàm logout từ authService
+import { logout } from '../services/authService'; 
 
 const { Header, Content, Footer, Sider } = Layout;
 
@@ -17,7 +17,6 @@ const items = [
   { key: 'order', icon: <ShoppingCartOutlined />, label: 'Quản lý đơn hàng' },
   { key: 'product', icon: <AppstoreOutlined />, label: 'Quản lý sản phẩm' },
   { key: 'category', icon: <AppstoreOutlined />, label: 'Quản lý danh mục' },
-  { key: 'comment/admin', icon: <CommentOutlined />, label: 'Quản lý bình luận' },
   { key: 'brand', icon: <TagOutlined />, label: 'Quản lý thương hiệu' },
 ];
 

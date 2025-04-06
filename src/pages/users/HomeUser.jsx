@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux'; // Thêm useDispatch
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { BASE_URL } from '../../api/index';
 import { Input, Spin } from 'antd';
@@ -13,12 +13,12 @@ import ProductModal from '../../components/ProductModal';
 import '../../styles/Home.scss';
 import HeaderUser from './HeaderUser';
 import FooterUser from './FooterUser';
-import { addToCart, fetchCartItems } from '../../redux/reducers/CartSlice'; // Import actions từ cartSlice
+import { addToCart, fetchCartItems } from '../../redux/reducers/CartSlice';
 
 const HomeUser = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch(); // Thêm dispatch
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth); // Không cần isAuthenticated vì đã có PrivateRoute
   const [products, setProducts] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [newProducts, setNewProducts] = useState([]);
@@ -129,18 +129,12 @@ const HomeUser = () => {
   };
 
   const handleAddToCart = async (productId) => {
-    if (!isAuthenticated) {
-      toast.warning('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!', { position: 'top-right', autoClose: 3000 });
-      navigate('/login');
-      return;
-    }
-  
     if (!user || !user.userId) {
       toast.error('Không tìm thấy thông tin người dùng! Vui lòng đăng nhập lại.', { position: 'top-right', autoClose: 3000 });
       navigate('/login');
       return;
     }
-  
+
     const userId = user.userId;
     try {
       const requestDTO = { productId, quantity: 1 };
@@ -158,6 +152,15 @@ const HomeUser = () => {
       <Spin spinning={loading} tip="Đang tải dữ liệu..." size="large">
         <div style={{ minHeight: '100vh' }}>
           <HeaderUser />
+
+          {/* Hiển thị lời chào cá nhân hóa */}
+          {user?.username && (
+            <div className="greeting-container" style={{ textAlign: 'center', margin: '20px 0' }}>
+              <h2 style={{ color: '#333', fontSize: '24px' }}>
+                Xin chào, {user.username}!
+              </h2>
+            </div>
+          )}
 
           <div className="banner-container">
             <Banner />
