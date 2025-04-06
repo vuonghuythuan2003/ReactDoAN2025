@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { fetchCartItems, updateCartItem, removeCartItem, clearCart, checkoutCart, clearCheckoutRedirect } from '../../redux/reducers/CartSlice';
+import { fetchCartItems, updateCartItem, removeCartItem, clearCart, checkoutCart, checkoutCOD, checkoutSuccess, clearCheckoutRedirect } from '../../redux/reducers/CartSlice';
 import HeaderUser from './HeaderUser';
 import FooterUser from './FooterUser';
-import { Card, Button, Form, Input, Row, Col, Typography, Space, Divider, Spin, Modal } from 'antd';
+import { Card, Button, Form, Input, Row, Col, Typography, Space, Divider, Spin, Modal, Radio } from 'antd';
 
 const { Title, Text } = Typography;
 
@@ -14,64 +14,58 @@ const CartPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { isAuthenticated, user, token } = useSelector((state) => state.auth);
-    const { items, loading, error, totalItems, checkoutRedirectUrl } = useSelector((state) => state.cart);
+    const { items, loading, error, totalItems, checkoutRedirectUrl, orderId, hasFetchedCart } = useSelector((state) => state.cart);
     const [form] = Form.useForm();
     const [paymentLoading, setPaymentLoading] = useState(false);
     const [orderInfo, setOrderInfo] = useState(null);
+    const [paymentMethod, setPaymentMethod] = useState('paypal'); // Mặc định là PayPal
 
     useEffect(() => {
-        if (!isAuthenticated) {
+        if (isAuthenticated && user?.userId && !hasFetchedCart && !loading) {
+            dispatch(fetchCartItems(user.userId));
+        } else if (!isAuthenticated) {
             toast.warning('Vui lòng đăng nhập để xem giỏ hàng!', { position: 'top-right', autoClose: 3000 });
             navigate('/login');
-            return;
         }
-        if (user?.userId) {
-            dispatch(fetchCartItems(user.userId));
-        }
-    }, [isAuthenticated, user, dispatch, navigate]);
+    }, [isAuthenticated, user?.userId, dispatch, navigate, hasFetchedCart, loading]);
 
     useEffect(() => {
         if (checkoutRedirectUrl) {
-            console.log('Redirecting to PayPal with URL:', checkoutRedirectUrl);
             window.location.href = checkoutRedirectUrl;
+            dispatch(clearCheckoutRedirect());
         }
-    }, [checkoutRedirectUrl]);
+    }, [checkoutRedirectUrl, dispatch]);
+
+    useEffect(() => {
+        if (orderId) {
+            setOrderInfo({ orderId, totalPrice: calculateTotalPrice() });
+            toast.success('Đặt hàng COD thành công!', { position: 'top-right', autoClose: 3000 });
+            dispatch(clearCheckoutRedirect());
+            dispatch(fetchCartItems(user.userId)); // Đồng bộ giỏ hàng sau COD
+        }
+    }, [orderId, dispatch, user?.userId]);
 
     useEffect(() => {
         const searchParams = new URLSearchParams(location.search);
         const paymentId = searchParams.get('paymentId');
         const payerId = searchParams.get('PayerID');
         const userId = searchParams.get('userId');
-    
-    
         const receiveAddress = searchParams.get('receiveAddress');
         const receiveName = searchParams.get('receiveName');
         const receivePhone = searchParams.get('receivePhone');
         const note = searchParams.get('note');
-    
-        if (location.pathname.includes('/success') && paymentId && payerId) {
-            fetch(`http://localhost:8080/api/v1/user/cart/checkout/success?paymentId=${paymentId}&PayerID=${payerId}&userId=${userId}&receiveAddress=${encodeURIComponent(receiveAddress)}&receiveName=${encodeURIComponent(receiveName)}&receivePhone=${encodeURIComponent(receivePhone)}${note ? `&note=${encodeURIComponent(note)}` : ''}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.message.includes('Thanh toán thành công')) {
-                        const orderId = data.message.split('Mã đơn hàng: ')[1] || 'N/A';
-                        const totalPrice = calculateTotalPrice();
-                        setOrderInfo({ orderId, totalPrice });
-                        toast.success('Thanh toán thành công!', { position: 'top-right', autoClose: 3000 });
-                        dispatch(clearCheckoutRedirect());
-                        dispatch(clearCart(user.userId));
-                    } else {
-                        throw new Error(data.message || 'Thanh toán không được phê duyệt!');
-                    }
+
+        if (location.pathname.includes('/success') && paymentId && payerId && userId) {
+            dispatch(checkoutSuccess({ paymentId, payerId, userId, receiveAddress, receiveName, receivePhone, note }))
+                .unwrap()
+                .then((data) => {
+                    const orderId = data.message.split('Mã đơn hàng: ')[1] || 'N/A';
+                    setOrderInfo({ orderId, totalPrice: calculateTotalPrice() });
+                    toast.success('Thanh toán PayPal thành công!', { position: 'top-right', autoClose: 3000 });
+                    dispatch(clearCart(user.userId));
                 })
-                .catch(error => {
-                    toast.error(error.message || 'Xác nhận thanh toán thất bại!', { position: 'top-right', autoClose: 3000 });
-                    console.error('Lỗi khi xác nhận thanh toán:', error);
+                .catch((error) => {
+                    toast.error(error || 'Xác nhận thanh toán thất bại!', { position: 'top-right', autoClose: 3000 });
                     navigate('/user/cart');
                 });
         } else if (location.pathname.includes('/cancel')) {
@@ -89,11 +83,10 @@ const CartPage = () => {
                 })
                 .catch(error => {
                     toast.error('Lỗi khi xử lý hủy thanh toán!', { position: 'top-right', autoClose: 3000 });
-                    console.error('Lỗi khi xử lý hủy thanh toán:', error);
                     navigate('/user/cart');
                 });
         }
-    }, [location, dispatch, navigate, user, token]);
+    }, [location.pathname, location.search, dispatch, navigate, user?.userId, token]);
 
     const handleQuantityChange = (cartItemId, quantity) => {
         if (quantity < 1) return;
@@ -101,8 +94,10 @@ const CartPage = () => {
             .unwrap()
             .then(() => toast.success('Cập nhật số lượng thành công!', { position: 'top-right', autoClose: 3000 }))
             .catch((error) => {
-                toast.error('Cập nhật số lượng thất bại!', { position: 'top-right', autoClose: 3000 });
-                console.error('Lỗi khi cập nhật số lượng:', error);
+                toast.error(error || 'Cập nhật số lượng thất bại!', { position: 'top-right', autoClose: 3000 });
+                if (error === 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại') {
+                    navigate('/login');
+                }
             });
     };
 
@@ -112,8 +107,10 @@ const CartPage = () => {
             .unwrap()
             .then(() => toast.success('Đã xóa sản phẩm khỏi giỏ hàng!', { position: 'top-right', autoClose: 3000 }))
             .catch((error) => {
-                toast.error('Xóa sản phẩm thất bại!', { position: 'top-right', autoClose: 3000 });
-                console.error('Lỗi khi xóa sản phẩm:', error);
+                toast.error(error || 'Xóa sản phẩm thất bại!', { position: 'top-right', autoClose: 3000 });
+                if (error === 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại') {
+                    navigate('/login');
+                }
             });
     };
 
@@ -124,8 +121,10 @@ const CartPage = () => {
                 .unwrap()
                 .then(() => toast.success('Đã xóa toàn bộ giỏ hàng!', { position: 'top-right', autoClose: 3000 }))
                 .catch((error) => {
-                    toast.error('Xóa giỏ hàng thất bại!', { position: 'top-right', autoClose: 3000 });
-                    console.error('Lỗi khi xóa giỏ hàng:', error);
+                    toast.error(error || 'Xóa giỏ hàng thất bại!', { position: 'top-right', autoClose: 3000 });
+                    if (error === 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại') {
+                        navigate('/login');
+                    }
                 });
         }
     };
@@ -137,7 +136,6 @@ const CartPage = () => {
 
     const handleCheckout = async () => {
         if (!isAuthenticated || !user?.userId) return redirectToLogin();
-
         if (items.length === 0) {
             toast.error('Giỏ hàng trống, không thể thanh toán!', { position: 'top-right', autoClose: 3000 });
             return;
@@ -146,31 +144,48 @@ const CartPage = () => {
         try {
             const values = await form.validateFields();
             setPaymentLoading(true);
-            dispatch(checkoutCart({
+            const checkoutData = {
                 userId: user.userId,
                 receiveAddress: values.receiveAddress,
                 receiveName: values.receiveName,
                 receivePhone: values.receivePhone,
                 note: values.note || 'Không có ghi chú',
-            }))
-                .unwrap()
-                .then((response) => {
-                    if (response.redirectUrl) {
-                        window.location.href = response.redirectUrl;
-                    } else {
-                        throw new Error('Không nhận được URL thanh toán từ server');
-                    }
-                })
-                .catch((error) => {
-                    const errorMessage = error.message || 'Khởi tạo thanh toán thất bại!';
-                    toast.error(errorMessage, { position: 'top-right', autoClose: 3000 });
-                    console.error('Lỗi khi khởi tạo thanh toán:', error);
-                })
-                .finally(() => {
-                    setPaymentLoading(false);
-                });
+            };
+
+            if (paymentMethod === 'paypal') {
+                dispatch(checkoutCart(checkoutData))
+                    .unwrap()
+                    .then((response) => {
+                        if (response.redirectUrl) {
+                            window.location.href = response.redirectUrl;
+                        } else {
+                            throw new Error('Không nhận được URL thanh toán từ server');
+                        }
+                    })
+                    .catch((error) => {
+                        toast.error(error || 'Khởi tạo thanh toán PayPal thất bại!', { position: 'top-right', autoClose: 3000 });
+                        if (error === 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại') {
+                            navigate('/login');
+                        }
+                    })
+                    .finally(() => setPaymentLoading(false));
+            } else if (paymentMethod === 'cod') {
+                dispatch(checkoutCOD(checkoutData))
+                    .unwrap()
+                    .then(() => {
+                        dispatch(fetchCartItems(user.userId)); // Đồng bộ giỏ hàng
+                    })
+                    .catch((error) => {
+                        toast.error(error || 'Khởi tạo thanh toán COD thất bại!', { position: 'top-right', autoClose: 3000 });
+                        if (error === 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại') {
+                            navigate('/login');
+                        }
+                    })
+                    .finally(() => setPaymentLoading(false));
+            }
         } catch (error) {
-            console.error('Validation failed:', error);
+            setPaymentLoading(false);
+            toast.error('Vui lòng điền đầy đủ thông tin giao hàng!', { position: 'top-right', autoClose: 3000 });
         }
     };
 
@@ -285,9 +300,6 @@ const CartPage = () => {
                             title={<Title level={3} style={{ margin: 0, color: '#2c3e50' }}>Thông tin giao hàng</Title>}
                             style={{ borderRadius: '10px', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)' }}
                         >
-                            <Text style={{ color: '#ff4d4f', display: 'block', marginBottom: '10px' }}>
-                                Lưu ý: Thanh toán sẽ được thực hiện bằng USD (tỷ giá tham khảo: 1 USD = 24,000 VNĐ).
-                            </Text>
                             <Form
                                 form={form}
                                 layout="vertical"
@@ -322,9 +334,15 @@ const CartPage = () => {
                                 <Form.Item label="Ghi chú (tuỳ chọn)" name="note">
                                     <Input.TextArea rows={3} placeholder="Ghi chú cho đơn hàng" />
                                 </Form.Item>
+                                <Form.Item label="Phương thức thanh toán">
+                                    <Radio.Group value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                                        <Radio value="paypal">Thanh toán qua PayPal (~${calculateTotalPriceInUSD()} USD)</Radio>
+                                        <Radio value="cod">Thanh toán khi nhận hàng (COD)</Radio>
+                                    </Radio.Group>
+                                </Form.Item>
                                 <Form.Item>
                                     <Button type="primary" htmlType="submit" style={{ borderRadius: '5px' }} loading={paymentLoading}>
-                                        Thanh toán qua PayPal
+                                        {paymentMethod === 'paypal' ? 'Thanh toán qua PayPal' : 'Đặt hàng COD'}
                                     </Button>
                                 </Form.Item>
                             </Form>
@@ -333,29 +351,30 @@ const CartPage = () => {
                 )}
             </div>
             <FooterUser />
-
             <Modal
                 title="Thanh toán thành công!"
                 open={!!orderInfo}
-                onOk={() => {
-                    setOrderInfo(null);
-                    navigate('/user/history');
-                }}
                 onCancel={() => {
                     setOrderInfo(null);
                     navigate('/user');
                 }}
-                okText="Xem đơn hàng"
-                cancelText="Đóng"
+                footer={[
+                    <Button key="close" onClick={() => {
+                        setOrderInfo(null);
+                        navigate('/user');
+                    }}>
+                        Đóng
+                    </Button>,
+                ]}
             >
                 {orderInfo && (
                     <div>
                         <Text strong>Mã đơn hàng:</Text> <Text>{orderInfo.orderId || 'N/A'}</Text>
                         <br />
-                        <Text strong>Tổng tiền:</Text> <Text>{orderInfo.totalPrice.toLocaleString('vi-VN')} VNĐ (~${calculateTotalPriceInUSD()} USD)</Text>
+                        <Text strong>Tổng tiền:</Text> <Text>{orderInfo.totalPrice.toLocaleString('vi-VN')} VNĐ {paymentMethod === 'paypal' ? `(~${calculateTotalPriceInUSD()} USD)` : ''}</Text>
                         <br />
                         <Text style={{ color: '#ff4d4f' }}>
-                            Vui lòng kiểm tra email hoặc trang quản lý đơn hàng để xem chi tiết.
+                            Đơn hàng sẽ được giao trong thời gian sớm nhất! Cảm ơn bạn đã mua hàng!
                         </Text>
                     </div>
                 )}
