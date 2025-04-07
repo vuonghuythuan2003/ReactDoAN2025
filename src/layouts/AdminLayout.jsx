@@ -206,7 +206,7 @@ const AdminLayout = () => {
                 color: isDarkMode ? '#e6e6e6' : '#000000',
               }}
             >
-              Watch Store Admin ©{new Date().getFullYear()} Created by xAI
+              Watch Store Admin ©{new Date().getFullYear()} Created by Vuong Huy Thuan
             </Footer>
           </Layout>
         </Layout>

@@ -5,7 +5,7 @@ import { FaShoppingCart, FaUser } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
-import { logout } from '../../services/authService';
+import { logoutUser } from '../../redux/reducers/AuthSlice'; // Thêm import logoutUser
 import { fetchCartItems, resetCart } from '../../redux/reducers/CartSlice';
 import { resetUserOrders } from '../../redux/reducers/OrderSliceUser';
 import { resetUserAccount } from '../../redux/reducers/AccountUserSlice';
@@ -15,19 +15,19 @@ import '../../styles/Home.scss';
 const HeaderUser = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
-    const { isAuthenticated, user } = useSelector((state) => state.auth);
+    const { isAuthenticated, user, token } = useSelector((state) => state.auth);
     const { totalItems, loading, hasFetchedCart } = useSelector((state) => state.cart);
     const [isModalVisible, setIsModalVisible] = useState(false);
 
     useEffect(() => {
-        if (isAuthenticated && user?.userId && !hasFetchedCart && !loading) {
+        if (isAuthenticated && user?.userId && !hasFetchedCart && !loading && token) {
             dispatch(fetchCartItems(user.userId));
         }
-    }, [isAuthenticated, user?.userId, dispatch, hasFetchedCart, loading]);
+    }, [isAuthenticated, user?.userId, dispatch, hasFetchedCart, loading, token]);
 
     const handleLogout = async () => {
         try {
-            await logout();
+            await dispatch(logoutUser()).unwrap(); // Sử dụng logoutUser từ Redux
             dispatch(resetCart());
             dispatch(resetUserOrders());
             dispatch(resetUserAccount());
@@ -128,7 +128,6 @@ const HeaderUser = () => {
                 </Container>
             </Navbar>
 
-            {/* Modal quản lý tài khoản */}
             <UserAccountModal
                 visible={isModalVisible}
                 onClose={() => setIsModalVisible(false)}

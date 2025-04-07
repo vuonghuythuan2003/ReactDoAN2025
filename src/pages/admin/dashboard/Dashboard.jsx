@@ -1,4 +1,3 @@
-// File: src/pages/admin/Dashboard.jsx
 import { useEffect, useState } from 'react';
 import { Card, Col, Row, Typography, Spin, Table, DatePicker, ConfigProvider, theme } from 'antd';
 import { PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from 'recharts';
@@ -51,7 +50,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        await dispatch(fetchDashboardData({ from, to }));
+        await dispatch(fetchDashboardData({ from, to })).unwrap();
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         toast.error('Không thể tải dữ liệu dashboard!', { position: 'top-right', autoClose: 3000 });
@@ -114,7 +113,6 @@ const Dashboard = () => {
     return (
       <div style={{ padding: token.paddingLG, background: isDarkMode ? token.colorBgBase : '#f0f2f5' }}>
         <Spin spinning={initialLoading || loading} tip="Đang tải dữ liệu..." size="large">
-          {/* Hiển thị lời chào cá nhân hóa */}
           {user?.username && (
             <div style={{ textAlign: 'center', marginBottom: token.marginLG }}>
               <Title level={2} style={{ color: isDarkMode ? '#e6e6e6' : '#333' }}>
@@ -188,7 +186,6 @@ const Dashboard = () => {
             </Col>
           </Row>
 
-          {/* Doanh thu theo thời gian - Biểu đồ đường */}
           <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
             <Col xs={24}>
               <Card
@@ -229,7 +226,6 @@ const Dashboard = () => {
             </Col>
           </Row>
 
-          {/* Doanh thu theo danh mục */}
           <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
             <Col xs={24}>
               <Card
@@ -283,7 +279,7 @@ const Dashboard = () => {
                 <Table
                   dataSource={newUsersThisMonth}
                   columns={newUsersColumns}
-                  rowKey="id"
+                  rowKey="key" // Updated to use the 'key' field
                   pagination={{ pageSize: 5 }}
                   bordered
                   style={{ borderRadius: token.borderRadiusLG, overflow: 'hidden' }}
@@ -345,7 +341,7 @@ const Dashboard = () => {
                 <Table
                   dataSource={bestSellerProducts}
                   columns={bestSellerColumns}
-                  rowKey="productId"
+                  rowKey="key" // Updated to use the 'key' field
                   pagination={{ pageSize: 5 }}
                   bordered
                   style={{ borderRadius: token.borderRadiusLG, overflow: 'hidden' }}

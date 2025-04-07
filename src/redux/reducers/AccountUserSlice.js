@@ -1,4 +1,3 @@
-// File: src/redux/reducers/AccountUserSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { BASE_URL_USER } from '../../api/index';
 
@@ -8,6 +7,9 @@ export const fetchUserAccount = createAsyncThunk(
     async (userId, { getState, rejectWithValue }) => {
         const { auth } = getState();
         const token = auth.token;
+        if (!token) {
+            return rejectWithValue('Không tìm thấy token, vui lòng đăng nhập lại');
+        }
         try {
             const response = await BASE_URL_USER.get(`/account?userId=${userId}`, {
                 headers: {
@@ -20,21 +22,25 @@ export const fetchUserAccount = createAsyncThunk(
             if (error.response?.status === 401) {
                 return rejectWithValue('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại');
             }
-            return rejectWithValue(error.response?.data?.message || error.message);
+            return rejectWithValue(error.response?.data?.message || 'Lỗi khi lấy thông tin tài khoản');
         }
     }
 );
 
-// Cập nhật thông tin tài khoản
+// Cập nhật thông tin tài khoản với multipart/form-data
 export const updateUserAccount = createAsyncThunk(
     'accountUser/updateUserAccount',
     async ({ userId, data }, { getState, rejectWithValue }) => {
         const { auth } = getState();
         const token = auth.token;
+        if (!token) {
+            return rejectWithValue('Không tìm thấy token, vui lòng đăng nhập lại');
+        }
         try {
             const response = await BASE_URL_USER.put(`/account?userId=${userId}`, data, {
                 headers: {
                     Authorization: `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data',
                 },
             });
             return response.data;
@@ -43,7 +49,7 @@ export const updateUserAccount = createAsyncThunk(
             if (error.response?.status === 401) {
                 return rejectWithValue('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại');
             }
-            return rejectWithValue(error.response?.data?.message || error.message);
+            return rejectWithValue(error.response?.data?.message || 'Lỗi khi cập nhật thông tin tài khoản');
         }
     }
 );
@@ -54,10 +60,14 @@ export const changePassword = createAsyncThunk(
     async ({ userId, data }, { getState, rejectWithValue }) => {
         const { auth } = getState();
         const token = auth.token;
+        if (!token) {
+            return rejectWithValue('Không tìm thấy token, vui lòng đăng nhập lại');
+        }
         try {
             const response = await BASE_URL_USER.put(`/account/change-password?userId=${userId}`, data, {
                 headers: {
                     Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json', // Đổi mật khẩu dùng JSON
                 },
             });
             return response.data;
@@ -66,7 +76,7 @@ export const changePassword = createAsyncThunk(
             if (error.response?.status === 401) {
                 return rejectWithValue('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại');
             }
-            return rejectWithValue(error.response?.data?.message || error.message);
+            return rejectWithValue(error.response?.data?.message || 'Lỗi khi đổi mật khẩu');
         }
     }
 );

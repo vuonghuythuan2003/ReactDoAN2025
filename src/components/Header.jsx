@@ -62,10 +62,8 @@ const Header = () => {
             <Nav.Link onClick={() => handleRestrictedClick('/brands')}>Thương hiệu</Nav.Link>
             <Nav.Link href="/categories/1">Đồng hồ nam</Nav.Link> 
             <Nav.Link href="/categories/2">Đồng hồ nữ</Nav.Link> 
-            <Nav.Link href="#">Cặp đôi</Nav.Link> {/* Tạm thời, có thể thay đổi */}
-            <Nav.Link onClick={handleRestrictedClick} href="#">Sửa chữa</Nav.Link>
-            <Nav.Link onClick={handleRestrictedClick}href="#">Kiến thức</Nav.Link>
-            <Nav.Link onClick={handleRestrictedClick} href="#">Phụ kiện</Nav.Link>
+            <Nav.Link href="/categories/3">Cặp đôi</Nav.Link> {/* Tạm thời, có thể thay đổi */}
+            <Nav.Link onClick={handleRestrictedClick} href="/user/history">Lịch sử đơn hàng</Nav.Link>
           </Nav>
 
           <div className="navbar-icons">

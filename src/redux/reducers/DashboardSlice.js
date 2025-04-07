@@ -1,6 +1,6 @@
-// File: src/redux/reducers/DashboardSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { BASE_URL_ADMIN, getToken } from '../../api/index'; 
+import { v4 as uuidv4 } from 'uuid';
+import { BASE_URL_ADMIN, getToken } from '../../api/index';
 
 export const fetchDashboardData = createAsyncThunk(
   'dashboard/fetchDashboardData',
@@ -14,25 +14,40 @@ export const fetchDashboardData = createAsyncThunk(
       const totalUsers = userResponse.data.totalElements || 0;
 
       const newUsersResponse = await BASE_URL_ADMIN.get('/new-accounts-this-month');
-      const newUsersThisMonth = newUsersResponse.data || [];
+      const newUsersThisMonth = newUsersResponse.data.map((user) => ({
+        key: uuidv4(), // Luôn dùng uuid, không dựa vào user.id
+        ...user,
+      })) || [];
 
       const topSpendingResponse = await BASE_URL_ADMIN.get('/reports/top-spending-customers', {
         params: { from, to },
       });
-      const topSpendingCustomers = topSpendingResponse.data || [];
+      const topSpendingCustomers = topSpendingResponse.data.map((customer) => ({
+        key: uuidv4(), // Luôn dùng uuid
+        ...customer,
+      })) || [];
 
       const revenueResponse = await BASE_URL_ADMIN.get('/reports/revenue-by-category');
-      const revenueData = revenueResponse.data || [];
+      const revenueData = revenueResponse.data.map((item) => ({
+        key: uuidv4(), // Luôn dùng uuid
+        ...item,
+      })) || [];
 
       const revenueOverTimeResponse = await BASE_URL_ADMIN.get('/reports/revenue-over-time', {
         params: { from, to },
       });
-      const revenueOverTime = revenueOverTimeResponse.data || [];
+      const revenueOverTime = revenueOverTimeResponse.data.map((item) => ({
+        key: uuidv4(), // Luôn dùng uuid
+        ...item,
+      })) || [];
 
       const bestSellerResponse = await BASE_URL_ADMIN.get('/reports/best-seller-products', {
         params: { from, to },
       });
-      const bestSellerProducts = bestSellerResponse.data || [];
+      const bestSellerProducts = bestSellerResponse.data.map((product) => ({
+        key: uuidv4(), // Luôn dùng uuid
+        ...product,
+      })) || [];
 
       const invoicesResponse = await BASE_URL_ADMIN.get('/invoices-over-time', {
         params: { from, to },
@@ -40,15 +55,16 @@ export const fetchDashboardData = createAsyncThunk(
       const totalInvoices = invoicesResponse.data.totalInvoices || 0;
 
       const trafficData = [
-        { name: 'Organic', value: 44.46, visits: 356 },
-        { name: 'Referral', value: 5.54, visits: 36 },
-        { name: 'Other', value: 50, visits: 245 },
+        { key: 'organic', name: 'Organic', value: 44.46, visits: 356 },
+        { key: 'referral', name: 'Referral', value: 5.54, visits: 36 },
+        { key: 'other', name: 'Other', value: 50, visits: 245 },
       ];
+
       const browserStats = [
-        { name: 'Google Chrome', value: 50 },
-        { name: 'Mozilla Firefox', value: 30 },
-        { name: 'Internet Explorer', value: 10 },
-        { name: 'Safari', value: 10 },
+        { key: 'chrome', name: 'Google Chrome', value: 50 },
+        { key: 'firefox', name: 'Mozilla Firefox', value: 30 },
+        { key: 'ie', name: 'Internet Explorer', value: 10 },
+        { key: 'safari', name: 'Safari', value: 10 },
       ];
 
       return {
@@ -82,8 +98,8 @@ const dashboardSlice = createSlice({
     browserStats: [],
     loading: false,
     error: null,
-    from: new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString(), // 1 năm trước
-    to: new Date().toISOString(), // Đến ngày hiện tại
+    from: new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString(),
+    to: new Date().toISOString(),
   },
   reducers: {
     setDateRange: (state, action) => {
