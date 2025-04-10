@@ -25,16 +25,16 @@ const FooterUser = () => {
         <Row>
           <Col md={4}>
             <h5>Thông tin liên hệ</h5>
-            <p>Địa chỉ: 123 Đường Đồng Hồ, TP. Hồ Chí Minh</p>
-            <p>Hotline: 0123 456 789</p>
-            <p>Email: support@xwatch.vn</p>
+            <p>Địa chỉ: Tân Uớc, Thanh Oai, Hà Nội</p>
+            <p>Hotline: 0386675773</p>
+            <p>Email: 21111062171@hunre.edu.vn</p>
           </Col>
           <Col md={4}>
             <h5>Chính sách</h5>
             <p>
               <a
-                href="/policy/warranty"
-                onClick={(e) => handleLinkClick(e, '/policy/warranty')}
+                href="#"
+                onClick={(e) => handleLinkClick(e, '#')}
                 style={{ color: isAuthenticated ? '#007bff' : '#6c757d', pointerEvents: isAuthenticated ? 'auto' : 'none' }}
               >
                 Chính sách bảo hành
@@ -42,8 +42,8 @@ const FooterUser = () => {
             </p>
             <p>
               <a
-                href="/policy/return"
-                onClick={(e) => handleLinkClick(e, '/policy/return')}
+                href="#"
+                onClick={(e) => handleLinkClick(e, '#')}
                 style={{ color: isAuthenticated ? '#007bff' : '#6c757d', pointerEvents: isAuthenticated ? 'auto' : 'none' }}
               >
                 Chính sách đổi trả
@@ -51,8 +51,8 @@ const FooterUser = () => {
             </p>
             <p>
               <a
-                href="/policy/delivery"
-                onClick={(e) => handleLinkClick(e, '/policy/delivery')}
+                href="#"
+                onClick={(e) => handleLinkClick(e, '#')}
                 style={{ color: isAuthenticated ? '#007bff' : '#6c757d', pointerEvents: isAuthenticated ? 'auto' : 'none' }}
               >
                 Chính sách giao hàng
@@ -63,8 +63,8 @@ const FooterUser = () => {
             <h5>Liên kết nhanh</h5>
             <p>
               <a
-                href="/about"
-                onClick={(e) => handleLinkClick(e, '/about')}
+                href="#"
+                onClick={(e) => handleLinkClick(e, '#')}
                 style={{ color: isAuthenticated ? '#007bff' : '#6c757d', pointerEvents: isAuthenticated ? 'auto' : 'none' }}
               >
                 Giới thiệu
@@ -72,8 +72,8 @@ const FooterUser = () => {
             </p>
             <p>
               <a
-                href="/news"
-                onClick={(e) => handleLinkClick(e, '/news')}
+                href="#"
+                onClick={(e) => handleLinkClick(e, '#')}
                 style={{ color: isAuthenticated ? '#007bff' : '#6c757d', pointerEvents: isAuthenticated ? 'auto' : 'none' }}
               >
                 Tin tức
@@ -81,8 +81,8 @@ const FooterUser = () => {
             </p>
             <p>
               <a
-                href="/contact"
-                onClick={(e) => handleLinkClick(e, '/contact')}
+                href="#"
+                onClick={(e) => handleLinkClick(e, '#')}
                 style={{ color: isAuthenticated ? '#007bff' : '#6c757d', pointerEvents: isAuthenticated ? 'auto' : 'none' }}
               >
                 Liên hệ

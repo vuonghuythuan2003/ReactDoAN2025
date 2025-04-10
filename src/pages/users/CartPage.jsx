@@ -38,7 +38,8 @@ const CartPage = () => {
 
     useEffect(() => {
         if (orderId) {
-            setOrderInfo({ orderId, totalPrice: calculateTotalPrice() });
+            const totalPrice = calculateTotalPrice(); // Tính tổng tiền trước khi giỏ hàng thay đổi
+            setOrderInfo({ orderId, totalPrice });
             toast.success('Đặt hàng COD thành công!', { position: 'top-right', autoClose: 3000 });
             dispatch(clearCheckoutRedirect());
             dispatch(fetchCartItems(user.userId)); // Đồng bộ giỏ hàng sau COD
@@ -60,7 +61,8 @@ const CartPage = () => {
                 .unwrap()
                 .then((data) => {
                     const orderId = data.message.split('Mã đơn hàng: ')[1] || 'N/A';
-                    setOrderInfo({ orderId, totalPrice: calculateTotalPrice() });
+                    const totalPrice = calculateTotalPrice(); // Tính tổng tiền trước khi xóa giỏ hàng
+                    setOrderInfo({ orderId, totalPrice });
                     toast.success('Thanh toán PayPal thành công!', { position: 'top-right', autoClose: 3000 });
                     dispatch(clearCart(user.userId));
                 })
@@ -151,6 +153,7 @@ const CartPage = () => {
                 receivePhone: values.receivePhone,
                 note: values.note || 'Không có ghi chú',
             };
+            const totalPrice = calculateTotalPrice(); // Tính tổng tiền trước khi thanh toán
 
             if (paymentMethod === 'paypal') {
                 dispatch(checkoutCart(checkoutData))
@@ -172,7 +175,8 @@ const CartPage = () => {
             } else if (paymentMethod === 'cod') {
                 dispatch(checkoutCOD(checkoutData))
                     .unwrap()
-                    .then(() => {
+                    .then((response) => {
+                        setOrderInfo({ orderId: response.orderId, totalPrice }); // Lưu tổng tiền trước khi giỏ hàng thay đổi
                         dispatch(fetchCartItems(user.userId)); // Đồng bộ giỏ hàng
                     })
                     .catch((error) => {
@@ -359,10 +363,13 @@ const CartPage = () => {
                     navigate('/user');
                 }}
                 footer={[
-                    <Button key="close" onClick={() => {
-                        setOrderInfo(null);
-                        navigate('/user');
-                    }}>
+                    <Button
+                        key="close"
+                        onClick={() => {
+                            setOrderInfo(null);
+                            navigate('/user');
+                        }}
+                    >
                         Đóng
                     </Button>,
                 ]}
@@ -371,7 +378,7 @@ const CartPage = () => {
                     <div>
                         <Text strong>Mã đơn hàng:</Text> <Text>{orderInfo.orderId || 'N/A'}</Text>
                         <br />
-                        <Text strong>Tổng tiền:</Text> <Text>{orderInfo.totalPrice.toLocaleString('vi-VN')} VNĐ {paymentMethod === 'paypal' ? `(~${calculateTotalPriceInUSD()} USD)` : ''}</Text>
+                        <Text strong>Tổng tiền:</Text> <Text>{orderInfo.totalPrice.toLocaleString('vi-VN')} VNĐ {paymentMethod === 'paypal' ? `(~${(orderInfo.totalPrice / 24000).toFixed(2)} USD)` : ''}</Text>
                         <br />
                         <Text style={{ color: '#ff4d4f' }}>
                             Đơn hàng sẽ được giao trong thời gian sớm nhất! Cảm ơn bạn đã mua hàng!

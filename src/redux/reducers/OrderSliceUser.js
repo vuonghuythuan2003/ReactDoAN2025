@@ -52,11 +52,11 @@ export const fetchOrderDetails = createAsyncThunk(
 // Lấy danh sách đơn hàng theo trạng thái
 export const fetchOrdersByStatus = createAsyncThunk(
     'userOrders/fetchOrdersByStatus',
-    async (orderStatus, { getState, rejectWithValue }) => {
+    async ({ status, userId }, { getState, rejectWithValue }) => {
         const { auth } = getState();
         const token = auth.token;
         try {
-            const response = await BASE_URL_USER.get(`/history/${orderStatus}`, {
+            const response = await BASE_URL_USER.get(`/history/${status}?userId=${userId}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -123,7 +123,6 @@ const orderSliceUser = createSlice({
         },
     },
     extraReducers: (builder) => {
-        // Fetch User Order History
         builder
             .addCase(fetchUserOrderHistory.pending, (state) => {
                 state.loading = true;
@@ -139,7 +138,6 @@ const orderSliceUser = createSlice({
                 state.error = action.payload;
             });
 
-        // Fetch Order Details
         builder
             .addCase(fetchOrderDetails.pending, (state) => {
                 state.loading = true;
@@ -155,7 +153,6 @@ const orderSliceUser = createSlice({
                 state.error = action.payload;
             });
 
-        // Fetch Orders by Status
         builder
             .addCase(fetchOrdersByStatus.pending, (state) => {
                 state.loading = true;
@@ -171,7 +168,6 @@ const orderSliceUser = createSlice({
                 state.error = action.payload;
             });
 
-        // Cancel Order
         builder
             .addCase(cancelOrder.pending, (state) => {
                 state.loading = true;

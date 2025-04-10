@@ -48,7 +48,7 @@ const OrderHistoryPage = () => {
             if (selectedStatus === 'ALL') {
                 dispatch(fetchUserOrderHistory(user.userId));
             } else {
-                dispatch(fetchOrdersByStatus(selectedStatus));
+                dispatch(fetchOrdersByStatus({ status: selectedStatus, userId: user.userId }));
             }
         }
     }, [isAuthenticated, user?.userId, dispatch, hasFetchedHistory, selectedStatus]);
@@ -65,7 +65,6 @@ const OrderHistoryPage = () => {
                 .unwrap()
                 .then(() => {
                     toast.success('Hủy đơn hàng thành công!', { position: 'top-right', autoClose: 3000 });
-                    // Reset hasFetchedHistory để gọi lại API
                     dispatch(resetFetchStatus());
                 })
                 .catch((error) => {
@@ -76,8 +75,12 @@ const OrderHistoryPage = () => {
 
     const handleStatusChange = (value) => {
         setSelectedStatus(value);
-        // Reset hasFetchedHistory để gọi lại API khi thay đổi trạng thái
         dispatch(resetFetchStatus());
+        if (value === 'ALL') {
+            dispatch(fetchUserOrderHistory(user.userId));
+        } else {
+            dispatch(fetchOrdersByStatus({ status: value, userId: user.userId }));
+        }
     };
 
     const handleCloseModal = () => {
