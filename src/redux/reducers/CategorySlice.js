@@ -61,7 +61,6 @@ export const updateCategory = createAsyncThunk('categories/updateCategory', asyn
   }
 });
 
-// Action bất đồng bộ để xóa danh mục
 export const deleteCategory = createAsyncThunk('categories/deleteCategory', async (categoryId, { rejectWithValue }) => {
   try {
     const token = getToken();
@@ -72,7 +71,10 @@ export const deleteCategory = createAsyncThunk('categories/deleteCategory', asyn
     });
     return { categoryId, message: response.data || 'Xóa danh mục thành công!' };
   } catch (error) {
-    return rejectWithValue(error.response?.data?.message || error.message || 'Xóa danh mục thất bại!');
+    const errorMessage = typeof error.response?.data === 'string' 
+      ? error.response.data 
+      : error.response?.data?.message || error.message || 'Xóa danh mục thất bại!';
+    return rejectWithValue(errorMessage);
   }
 });
 

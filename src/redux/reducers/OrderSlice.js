@@ -1,38 +1,45 @@
-// File: src/redux/reducers/OrderSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { BASE_URL_ADMIN, getToken } from '../../api/index';
 
-// Action bất đồng bộ để lấy tất cả đơn hàng
-export const fetchAllOrders = createAsyncThunk('orders/fetchAllOrders', async (_, { rejectWithValue }) => {
+// Lấy tất cả đơn hàng với phân trang
+export const fetchAllOrders = createAsyncThunk('orders/fetchAllOrders', async ({ page, size }, { rejectWithValue }) => {
   try {
     const token = getToken();
-    const response = await BASE_URL_ADMIN.get('/orders', {
+    const response = await BASE_URL_ADMIN.get(`/orders?page=${page}&size=${size}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    return response.data.content || response.data;
+    const data = response.data;
+    return {
+      content: data.content || data,
+      total: data.totalElements || 0,
+    };
   } catch (error) {
     return rejectWithValue(error.response?.data || { message: 'Không thể lấy danh sách đơn hàng!' });
   }
 });
 
-// Action bất đồng bộ để lấy đơn hàng theo trạng thái
-export const fetchOrdersByStatus = createAsyncThunk('orders/fetchOrdersByStatus', async (status, { rejectWithValue }) => {
+// Lấy đơn hàng theo trạng thái với phân trang
+export const fetchOrdersByStatus = createAsyncThunk('orders/fetchOrdersByStatus', async ({ status, page, size }, { rejectWithValue }) => {
   try {
     const token = getToken();
-    const response = await BASE_URL_ADMIN.get(`/orders/status/${status}`, {
+    const response = await BASE_URL_ADMIN.get(`/orders/status/${status}?page=${page}&size=${size}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    return response.data.content || response.data;
+    const data = response.data;
+    return {
+      content: data.content || data,
+      total: data.totalElements || 0,
+    };
   } catch (error) {
     return rejectWithValue(error.response?.data || { message: `Không thể lấy danh sách đơn hàng với trạng thái ${status}!` });
   }
 });
 
-// Action bất đồng bộ để lấy chi tiết đơn hàng
+// Lấy chi tiết đơn hàng
 export const fetchOrderDetail = createAsyncThunk('orders/fetchOrderDetail', async (orderId, { rejectWithValue }) => {
   try {
     const token = getToken();
@@ -41,19 +48,23 @@ export const fetchOrderDetail = createAsyncThunk('orders/fetchOrderDetail', asyn
         Authorization: `Bearer ${token}`,
       },
     });
-    return response.data;
+    return {
+      ...response.data,
+      items: response.data.items || [],
+      serialNumber: response.data.serialNumber || response.data.orderId, // Đảm bảo serialNumber luôn có giá trị
+    };
   } catch (error) {
     return rejectWithValue(error.response?.data || { message: 'Không thể lấy chi tiết đơn hàng!' });
   }
 });
 
-// Action bất đồng bộ để cập nhật trạng thái đơn hàng
+// Cập nhật trạng thái đơn hàng
 export const updateOrderStatus = createAsyncThunk('orders/updateOrderStatus', async ({ orderId, status }, { rejectWithValue }) => {
   try {
     const token = getToken();
     const response = await BASE_URL_ADMIN.put(
       `/orders/${orderId}/status`,
-      status, // Gửi trực tiếp chuỗi status thay vì { status }
+      status,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -67,7 +78,7 @@ export const updateOrderStatus = createAsyncThunk('orders/updateOrderStatus', as
   }
 });
 
-// Action để set currentPage và pageSize
+// Đặt trang hiện tại và kích thước trang
 export const setCurrentPage = createAsyncThunk('orders/setCurrentPage', async (page) => page);
 export const setPageSize = createAsyncThunk('orders/setPageSize', async (size) => size);
 
@@ -75,7 +86,7 @@ const orderSlice = createSlice({
   name: 'orders',
   initialState: {
     orders: [],
-    filteredOrders: [],
+    totalOrders: 0,
     selectedOrder: null,
     loading: false,
     error: null,
@@ -100,15 +111,15 @@ const orderSlice = createSlice({
             order.receivePhone.toLowerCase().includes(lowerSearchText)
         );
       }
-      state.filteredOrders = result;
-      state.currentPage = 1; // Reset về trang 1 khi tìm kiếm
+      state.orders = result;
+      state.currentPage = 1;
     },
     setStatusFilter: (state, action) => {
       state.statusFilter = action.payload;
     },
   },
   extraReducers: (builder) => {
-    // Fetch All Orders
+    // Lấy tất cả đơn hàng
     builder
       .addCase(fetchAllOrders.pending, (state) => {
         state.loading = true;
@@ -116,15 +127,15 @@ const orderSlice = createSlice({
       })
       .addCase(fetchAllOrders.fulfilled, (state, action) => {
         state.loading = false;
-        state.orders = action.payload;
-        state.filteredOrders = action.payload; // Ban đầu hiển thị tất cả
+        state.orders = action.payload.content;
+        state.totalOrders = action.payload.total;
       })
       .addCase(fetchAllOrders.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload.message;
       });
 
-    // Fetch Orders By Status
+    // Lấy đơn hàng theo trạng thái
     builder
       .addCase(fetchOrdersByStatus.pending, (state) => {
         state.loading = true;
@@ -132,15 +143,15 @@ const orderSlice = createSlice({
       })
       .addCase(fetchOrdersByStatus.fulfilled, (state, action) => {
         state.loading = false;
-        state.orders = action.payload;
-        state.filteredOrders = action.payload;
+        state.orders = action.payload.content;
+        state.totalOrders = action.payload.total;
       })
       .addCase(fetchOrdersByStatus.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload.message;
       });
 
-    // Fetch Order Detail
+    // Lấy chi tiết đơn hàng
     builder
       .addCase(fetchOrderDetail.pending, (state) => {
         state.loading = true;
@@ -155,7 +166,7 @@ const orderSlice = createSlice({
         state.error = action.payload.message;
       });
 
-    // Update Order Status
+    // Cập nhật trạng thái đơn hàng
     builder
       .addCase(updateOrderStatus.pending, (state) => {
         state.loading = true;
@@ -165,14 +176,13 @@ const orderSlice = createSlice({
         state.loading = false;
         const updatedOrder = action.payload;
         state.orders = state.orders.map((order) => (order.orderId === updatedOrder.orderId ? updatedOrder : order));
-        state.filteredOrders = state.filteredOrders.map((order) => (order.orderId === updatedOrder.orderId ? updatedOrder : order));
       })
       .addCase(updateOrderStatus.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload.message;
       });
 
-    // Set Pagination
+    // Cài đặt phân trang
     builder
       .addCase(setCurrentPage.fulfilled, (state, action) => {
         state.currentPage = action.payload;

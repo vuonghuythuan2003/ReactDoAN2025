@@ -1,52 +1,51 @@
-import React, { useEffect, useState } from 'react'; 
+import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Table, Input, Select, Button, Typography, Spin, Space, Tag, Modal, Card, Descriptions } from 'antd';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { SearchOutlined } from '@ant-design/icons';
 import { fetchAllOrders, fetchOrdersByStatus, fetchOrderDetail, updateOrderStatus, setCurrentPage, setPageSize, setSearchText, setStatusFilter, clearSelectedOrder } from '../../../redux/reducers/OrderSlice';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const { Title } = Typography;
 const { Option } = Select;
 
 const Orders = () => {
   const dispatch = useDispatch();
-  const { orders, filteredOrders, selectedOrder, loading, error, currentPage, pageSize, searchText, statusFilter } = useSelector((state) => state.orders);
-  const [initialLoading, setInitialLoading] = useState(true); // Thêm trạng thái initialLoading
+  const { orders, totalOrders, selectedOrder, loading, error, currentPage, pageSize, searchText, statusFilter } = useSelector((state) => state.orders);
+  const [initialLoading, setInitialLoading] = useState(true);
   const statusOptions = ['WAITING', 'CONFIRM', 'DELIVERY', 'SUCCESS', 'CANCEL'];
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        await dispatch(fetchAllOrders());
+        await dispatch(fetchAllOrders({ page: currentPage - 1, size: pageSize }));
       } catch (error) {
-        console.error('Error fetching orders:', error);
+        console.error('Lỗi khi tải đơn hàng:', error);
         toast.error('Không thể tải danh sách đơn hàng!', { position: 'top-right', autoClose: 3000 });
       } finally {
-        // Giả lập loading 3 giây
         setTimeout(() => {
           setInitialLoading(false);
         }, 3000);
       }
     };
     fetchInitialData();
-  }, [dispatch]);
+  }, [dispatch, currentPage, pageSize]);
 
-  // Hiển thị thông báo lỗi từ Redux
   useEffect(() => {
     if (error) {
       toast.error(error, { position: 'top-right', autoClose: 3000 });
     }
   }, [error]);
 
-  // Xử lý khi statusFilter thay đổi
   useEffect(() => {
     if (statusFilter) {
-      dispatch(fetchOrdersByStatus(statusFilter));
+      dispatch(fetchOrdersByStatus({ status: statusFilter, page: currentPage - 1, size: pageSize }));
     } else {
-      dispatch(fetchAllOrders());
+      dispatch(fetchAllOrders({ page: currentPage - 1, size: pageSize }));
     }
-  }, [statusFilter, dispatch]);
+  }, [statusFilter, currentPage, pageSize, dispatch]);
 
   const handleSearch = (value) => {
     dispatch(setSearchText(value));
@@ -54,11 +53,12 @@ const Orders = () => {
 
   const handleStatusFilter = (value) => {
     dispatch(setStatusFilter(value));
+    dispatch(setCurrentPage(1));
   };
 
   const handleViewDetail = (record) => {
     dispatch(fetchOrderDetail(record.orderId)).then(() => {
-      setTimeout(() => {}, 4000); // Giữ hiệu ứng loading giống bản gốc
+      setTimeout(() => {}, 4000);
     });
   };
 
@@ -77,6 +77,107 @@ const Orders = () => {
         toast.success('Cập nhật trạng thái thành công!', { position: 'top-right', autoClose: 3000 });
       }
     });
+  };
+
+  const generatePDF = () => {
+    if (!selectedOrder) {
+      toast.error('Không có đơn hàng được chọn!', { position: 'top-right', autoClose: 3000 });
+      return;
+    }
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    let y = margin;
+
+    // Đặt font hỗ trợ tiếng Việt
+    doc.setFont('times', 'normal');
+
+    // Thông tin cửa hàng
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Cua Hang Xwaitch', margin, y);
+    y += 8;
+    doc.text('Dia chi : Tan Uoc Thanh Oai Ha Noi', margin, y);
+    y += 8;
+    doc.text('So dien thoai lien he: 0386675773', margin, y);
+    y += 15;
+
+    // Tiêu đề
+    doc.setFontSize(20);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('times', 'bold');
+    doc.text('HOA DON DAT HANG', pageWidth / 2, y, { align: 'center' });
+    y += 15;
+
+    // Thông tin đơn hàng
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('times', 'normal');
+    doc.text(`Ma don hang: ${selectedOrder.serialNumber || selectedOrder.orderId}`, margin, y);
+    y += 8;
+    doc.text(`Status: ${selectedOrder.status}`, margin, y);
+    y += 8;
+    doc.text(`Ngay dat: ${formatDate(selectedOrder.createdAt)}`, margin, y);
+    y += 15;
+
+    // Thông tin khách hàng
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('times', 'bold');
+    doc.text('Thong tin khach hang', margin, y);
+    y += 8;
+    doc.setFontSize(12);
+    doc.setFont('times', 'normal');
+    doc.text(`Ten khach hang: ${selectedOrder.receiveName}`, margin, y);
+    y += 8;
+    doc.text(`Dia chi: ${selectedOrder.receiveAddress}`, margin, y);
+    y += 8;
+    doc.text(`So dien thoai: ${selectedOrder.receivePhone}`, margin, y);
+    y += 15;
+
+    // Chi tiết đơn hàng
+    doc.setFontSize(14);
+    doc.setFont('times', 'bold');
+    doc.text('CHI TIET DON HANG', margin, y);
+    y += 8;
+
+    const items = selectedOrder.items || [];
+    if (items.length > 0) {
+      doc.autoTable({
+        startY: y,
+        head: [['Sản phẩm', 'Số lượng', 'Đơn giá', 'Thành tiền']],
+        body: items.map(item => [
+          item.name || 'Không có tên',
+          item.quantity || 0,
+          formatCurrency(item.price || 0),
+          formatCurrency((item.quantity || 0) * (item.price || 0))
+        ]),
+        styles: { fontSize: 12, font: 'times' },
+        headStyles: { fillColor: [26, 115, 232], textColor: [255, 255, 255] },
+      });
+      y = doc.lastAutoTable.finalY + 10;
+    } else {
+      doc.setFontSize(12);
+      doc.setFont('times', 'normal');
+      doc.text('Khong co thong tin san pham.', margin, y);
+      y += 10;
+    }
+
+    // Tổng tiền
+    doc.setFontSize(14);
+    doc.setFont('times', 'bold');
+    doc.text(`TONG TIEN: ${formatCurrency(selectedOrder.totalPrice)}`, pageWidth - margin - 60, y);
+
+    // Chân trang
+    y += 20;
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.setFont('times', 'normal');
+    doc.text('CAM ON QUY KHACH DA MUA SAM!', pageWidth / 2, y, { align: 'center' });
+
+    // Lưu PDF
+    doc.save(`HoaDon_${selectedOrder.serialNumber || selectedOrder.orderId}.pdf`);
   };
 
   const getStatusTag = (status) => {
@@ -108,7 +209,7 @@ const Orders = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return 'Không có';
     const date = new Date(dateString);
     return date.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
@@ -209,8 +310,6 @@ const Orders = () => {
     },
   ];
 
-  const paginatedData = filteredOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
   return (
     <>
       <style>
@@ -293,10 +392,10 @@ const Orders = () => {
           Quản lý đơn hàng
         </Title>
         <Card style={{ borderRadius: 8, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', background: '#fff' }}>
-        <Spin spinning={initialLoading || loading} tip="Đang tải dữ liệu..." size="large">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <Spin spinning={initialLoading || loading} tip="Đang tải dữ liệu..." size="large">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Title level={4} style={{ margin: 0, color: '#333' }}>
-                Tổng số đơn hàng: {filteredOrders.length}
+                Tổng số đơn hàng: {totalOrders}
               </Title>
               <div style={{ display: 'flex', gap: '16px' }}>
                 <Input.Search
@@ -325,14 +424,14 @@ const Orders = () => {
             <Table
               className="tableContainer"
               columns={columns}
-              dataSource={paginatedData}
+              dataSource={orders}
               rowKey="orderId"
               pagination={{
                 current: currentPage,
                 pageSize,
-                total: filteredOrders.length,
+                total: totalOrders,
                 showSizeChanger: true,
-                pageSizeOptions: ['5', '10', '20'],
+                pageSizeOptions: ['5', '10', '20', '50', '100'],
                 showTotal: (total) => `Tổng ${total} đơn hàng`,
                 onChange: (page, pageSize) => handleTableChange({ current: page, pageSize }),
               }}
@@ -347,7 +446,14 @@ const Orders = () => {
           title="Chi tiết đơn hàng"
           open={!!selectedOrder}
           onCancel={handleModalClose}
-          footer={[<Button key="close" onClick={handleModalClose}>Đóng</Button>]}
+          footer={[
+            <Button key="close" onClick={handleModalClose}>
+              Đóng
+            </Button>,
+            <Button key="export" type="primary" onClick={generatePDF} disabled={loading || !selectedOrder}>
+              Xuất PDF
+            </Button>,
+          ]}
           width={800}
         >
           {selectedOrder && (

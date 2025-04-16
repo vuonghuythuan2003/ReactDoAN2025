@@ -25,8 +25,7 @@ const Dashboard = () => {
     revenueOverTime,
     bestSellerProducts,
     totalInvoices,
-    trafficData,
-    browserStats,
+    // Removed: trafficData, browserStats
     loading,
     error,
     from,
@@ -279,7 +278,7 @@ const Dashboard = () => {
                 <Table
                   dataSource={newUsersThisMonth}
                   columns={newUsersColumns}
-                  rowKey="key" // Updated to use the 'key' field
+                  rowKey="key"
                   pagination={{ pageSize: 5 }}
                   bordered
                   style={{ borderRadius: token.borderRadiusLG, overflow: 'hidden' }}
@@ -341,7 +340,7 @@ const Dashboard = () => {
                 <Table
                   dataSource={bestSellerProducts}
                   columns={bestSellerColumns}
-                  rowKey="key" // Updated to use the 'key' field
+                  rowKey="key"
                   pagination={{ pageSize: 5 }}
                   bordered
                   style={{ borderRadius: token.borderRadiusLG, overflow: 'hidden' }}
@@ -350,6 +349,7 @@ const Dashboard = () => {
             </Col>
           </Row>
 
+          {/* Removed: Traffic Data and Browser Stats
           <Row gutter={[token.marginLG, token.marginLG]} style={{ marginBottom: token.marginLG }}>
             <Col xs={24} md={12}>
               <Card
@@ -412,6 +412,7 @@ const Dashboard = () => {
               </Card>
             </Col>
           </Row>
+          */}
         </Spin>
       </div>
     );

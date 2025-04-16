@@ -15,7 +15,7 @@ export const fetchDashboardData = createAsyncThunk(
 
       const newUsersResponse = await BASE_URL_ADMIN.get('/new-accounts-this-month');
       const newUsersThisMonth = newUsersResponse.data.map((user) => ({
-        key: uuidv4(), // Luôn dùng uuid, không dựa vào user.id
+        key: uuidv4(),
         ...user,
       })) || [];
 
@@ -23,13 +23,13 @@ export const fetchDashboardData = createAsyncThunk(
         params: { from, to },
       });
       const topSpendingCustomers = topSpendingResponse.data.map((customer) => ({
-        key: uuidv4(), // Luôn dùng uuid
+        key: uuidv4(),
         ...customer,
       })) || [];
 
       const revenueResponse = await BASE_URL_ADMIN.get('/reports/revenue-by-category');
       const revenueData = revenueResponse.data.map((item) => ({
-        key: uuidv4(), // Luôn dùng uuid
+        key: uuidv4(),
         ...item,
       })) || [];
 
@@ -37,7 +37,7 @@ export const fetchDashboardData = createAsyncThunk(
         params: { from, to },
       });
       const revenueOverTime = revenueOverTimeResponse.data.map((item) => ({
-        key: uuidv4(), // Luôn dùng uuid
+        key: uuidv4(),
         ...item,
       })) || [];
 
@@ -45,7 +45,7 @@ export const fetchDashboardData = createAsyncThunk(
         params: { from, to },
       });
       const bestSellerProducts = bestSellerResponse.data.map((product) => ({
-        key: uuidv4(), // Luôn dùng uuid
+        key: uuidv4(),
         ...product,
       })) || [];
 
@@ -53,19 +53,6 @@ export const fetchDashboardData = createAsyncThunk(
         params: { from, to },
       });
       const totalInvoices = invoicesResponse.data.totalInvoices || 0;
-
-      const trafficData = [
-        { key: 'organic', name: 'Organic', value: 44.46, visits: 356 },
-        { key: 'referral', name: 'Referral', value: 5.54, visits: 36 },
-        { key: 'other', name: 'Other', value: 50, visits: 245 },
-      ];
-
-      const browserStats = [
-        { key: 'chrome', name: 'Google Chrome', value: 50 },
-        { key: 'firefox', name: 'Mozilla Firefox', value: 30 },
-        { key: 'ie', name: 'Internet Explorer', value: 10 },
-        { key: 'safari', name: 'Safari', value: 10 },
-      ];
 
       return {
         totalUsers,
@@ -75,8 +62,6 @@ export const fetchDashboardData = createAsyncThunk(
         revenueOverTime,
         bestSellerProducts,
         totalInvoices,
-        trafficData,
-        browserStats,
       };
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Không thể lấy dữ liệu dashboard!');
@@ -94,8 +79,6 @@ const dashboardSlice = createSlice({
     revenueOverTime: [],
     bestSellerProducts: [],
     totalInvoices: 0,
-    trafficData: [],
-    browserStats: [],
     loading: false,
     error: null,
     from: new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString(),
@@ -122,8 +105,6 @@ const dashboardSlice = createSlice({
         state.revenueOverTime = action.payload.revenueOverTime;
         state.bestSellerProducts = action.payload.bestSellerProducts;
         state.totalInvoices = action.payload.totalInvoices;
-        state.trafficData = action.payload.trafficData;
-        state.browserStats = action.payload.browserStats;
       })
       .addCase(fetchDashboardData.rejected, (state, action) => {
         state.loading = false;

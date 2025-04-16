@@ -31,7 +31,7 @@ const Header = () => {
 
   const handleUserClick = () => {
     if (!isAuthenticated) {
-      toast.warning('Vui lòng đăng nhập để sử dụng chức năng này!', { position: 'top-right', autoClose: 3000 });
+      toast.warning('Đăng xuất!', { position: 'top-right', autoClose: 3000 });
       navigate('/login');
     } else {
       handleLogout();
