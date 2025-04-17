@@ -5,8 +5,11 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { SearchOutlined } from '@ant-design/icons';
 import { fetchAllOrders, fetchOrdersByStatus, fetchOrderDetail, updateOrderStatus, setCurrentPage, setPageSize, setSearchText, setStatusFilter, clearSelectedOrder } from '../../../redux/reducers/OrderSlice';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
+
+// Sử dụng font mặc định của pdfmake (Roboto)
+pdfMake.vfs = pdfFonts; // Sửa cách gán vfs, sử dụng pdfFonts trực tiếp
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -80,104 +83,114 @@ const Orders = () => {
   };
 
   const generatePDF = () => {
-    if (!selectedOrder) {
+    if (!selectedOrder || !selectedOrder.orderId) {
       toast.error('Không có đơn hàng được chọn!', { position: 'top-right', autoClose: 3000 });
       return;
     }
 
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 20;
-    let y = margin;
-
-    // Đặt font hỗ trợ tiếng Việt
-    doc.setFont('times', 'normal');
-
-    // Thông tin cửa hàng
-    doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
-    doc.text('Cua Hang Xwaitch', margin, y);
-    y += 8;
-    doc.text('Dia chi : Tan Uoc Thanh Oai Ha Noi', margin, y);
-    y += 8;
-    doc.text('So dien thoai lien he: 0386675773', margin, y);
-    y += 15;
-
-    // Tiêu đề
-    doc.setFontSize(20);
-    doc.setTextColor(0, 0, 0);
-    doc.setFont('times', 'bold');
-    doc.text('HOA DON DAT HANG', pageWidth / 2, y, { align: 'center' });
-    y += 15;
-
-    // Thông tin đơn hàng
-    doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
-    doc.setFont('times', 'normal');
-    doc.text(`Ma don hang: ${selectedOrder.serialNumber || selectedOrder.orderId}`, margin, y);
-    y += 8;
-    doc.text(`Status: ${selectedOrder.status}`, margin, y);
-    y += 8;
-    doc.text(`Ngay dat: ${formatDate(selectedOrder.createdAt)}`, margin, y);
-    y += 15;
-
-    // Thông tin khách hàng
-    doc.setFontSize(14);
-    doc.setTextColor(0, 0, 0);
-    doc.setFont('times', 'bold');
-    doc.text('Thong tin khach hang', margin, y);
-    y += 8;
-    doc.setFontSize(12);
-    doc.setFont('times', 'normal');
-    doc.text(`Ten khach hang: ${selectedOrder.receiveName}`, margin, y);
-    y += 8;
-    doc.text(`Dia chi: ${selectedOrder.receiveAddress}`, margin, y);
-    y += 8;
-    doc.text(`So dien thoai: ${selectedOrder.receivePhone}`, margin, y);
-    y += 15;
-
-    // Chi tiết đơn hàng
-    doc.setFontSize(14);
-    doc.setFont('times', 'bold');
-    doc.text('CHI TIET DON HANG', margin, y);
-    y += 8;
-
     const items = selectedOrder.items || [];
-    if (items.length > 0) {
-      doc.autoTable({
-        startY: y,
-        head: [['Sản phẩm', 'Số lượng', 'Đơn giá', 'Thành tiền']],
-        body: items.map(item => [
-          item.name || 'Không có tên',
-          item.quantity || 0,
-          formatCurrency(item.price || 0),
-          formatCurrency((item.quantity || 0) * (item.price || 0))
-        ]),
-        styles: { fontSize: 12, font: 'times' },
-        headStyles: { fillColor: [26, 115, 232], textColor: [255, 255, 255] },
-      });
-      y = doc.lastAutoTable.finalY + 10;
-    } else {
-      doc.setFontSize(12);
-      doc.setFont('times', 'normal');
-      doc.text('Khong co thong tin san pham.', margin, y);
-      y += 10;
+    if (!items.length) {
+      toast.warn('Đơn hàng không có sản phẩm!', { position: 'top-right', autoClose: 3000 });
     }
 
-    // Tổng tiền
-    doc.setFontSize(14);
-    doc.setFont('times', 'bold');
-    doc.text(`TONG TIEN: ${formatCurrency(selectedOrder.totalPrice)}`, pageWidth - margin - 60, y);
+    const docDefinition = {
+      content: [
+        // Thông tin cửa hàng
+        { text: 'Cửa Hàng Xwaitch', style: 'subheader' },
+        { text: 'Địa chỉ: Tân Ước, Thanh Oai, Hà Nội', style: 'normal' },
+        { text: 'Số điện thoại liên hệ: 0386675773', style: 'normal', margin: [0, 0, 0, 15] },
 
-    // Chân trang
-    y += 20;
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.setFont('times', 'normal');
-    doc.text('CAM ON QUY KHACH DA MUA SAM!', pageWidth / 2, y, { align: 'center' });
+        // Tiêu đề
+        { text: 'HÓA ĐƠN ĐẶT HÀNG', style: 'header', alignment: 'center', margin: [0, 0, 0, 15] },
 
-    // Lưu PDF
-    doc.save(`HoaDon_${selectedOrder.serialNumber || selectedOrder.orderId}.pdf`);
+        // Thông tin đơn hàng
+        { text: `Mã đơn hàng: ${selectedOrder.serialNumber || selectedOrder.orderId}`, style: 'normal' },
+        { text: `Trạng thái: ${selectedOrder.status}`, style: 'normal' },
+        { text: `Ngày đặt: ${formatDate(selectedOrder.createdAt)}`, style: 'normal', margin: [0, 0, 0, 15] },
+
+        // Thông tin khách hàng
+        { text: 'Thông tin khách hàng', style: 'subheader', margin: [0, 0, 0, 8] },
+        { text: `Tên khách hàng: ${selectedOrder.receiveName || 'Không có'}`, style: 'normal' },
+        { text: `Địa chỉ: ${selectedOrder.receiveAddress || 'Không có'}`, style: 'normal' },
+        { text: `Số điện thoại: ${selectedOrder.receivePhone || 'Không có'}`, style: 'normal', margin: [0, 0, 0, 15] },
+
+        // Chi tiết đơn hàng
+        { text: 'CHI TIẾT ĐƠN HÀNG', style: 'subheader', margin: [0, 0, 0, 8] },
+        items.length > 0
+          ? {
+              table: {
+                headerRows: 1,
+                widths: ['*', 60, 80, 80],
+                body: [
+                  [
+                    { text: 'Sản phẩm', style: 'tableHeader' },
+                    { text: 'Số lượng', style: 'tableHeader', alignment: 'center' },
+                    { text: 'Đơn giá', style: 'tableHeader', alignment: 'right' },
+                    { text: 'Thành tiền', style: 'tableHeader', alignment: 'right' },
+                  ],
+                  ...items.map(item => [
+                    item.productName || 'Không có tên',
+                    { text: item.orderQuantity || 0, alignment: 'center' },
+                    { text: formatCurrency(item.unitPrice || 0), alignment: 'right' },
+                    { text: formatCurrency((item.orderQuantity || 0) * (item.unitPrice || 0)), alignment: 'right' },
+                  ]),
+                ],
+              },
+              layout: {
+                fillColor: function (rowIndex) {
+                  return rowIndex % 2 === 0 ? '#F5F5F5' : null;
+                },
+                hLineWidth: function () {
+                  return 0.5;
+                },
+                vLineWidth: function () {
+                  return 0.5;
+                },
+              },
+            }
+          : { text: 'Không có thông tin sản phẩm.', style: 'normal', margin: [0, 0, 0, 10] },
+
+        // Tổng tiền
+        { text: `TỔNG TIỀN: ${formatCurrency(selectedOrder.totalPrice || 0)}`, style: 'subheader', alignment: 'right', margin: [0, 10, 0, 20] },
+
+        // Chân trang
+        { text: 'CẢM ƠN QUÝ KHÁCH ĐÃ MUA SẮM!', style: 'footer', alignment: 'center' },
+      ],
+      styles: {
+        header: {
+          fontSize: 20,
+          bold: true,
+          font: 'Roboto',
+        },
+        subheader: {
+          fontSize: 14,
+          bold: true,
+          font: 'Roboto',
+        },
+        normal: {
+          fontSize: 12,
+          font: 'Roboto',
+        },
+        tableHeader: {
+          fontSize: 12,
+          bold: true,
+          font: 'Roboto',
+          fillColor: '#1A73E8',
+          color: 'white',
+        },
+        footer: {
+          fontSize: 10,
+          font: 'Roboto',
+          color: 'gray',
+        },
+      },
+      defaultStyle: {
+        font: 'Roboto',
+      },
+      pageMargins: [20, 20, 20, 20],
+    };
+
+    pdfMake.createPdf(docDefinition).download(`HoaDon_${selectedOrder.serialNumber || selectedOrder.orderId}.pdf`);
   };
 
   const getStatusTag = (status) => {
@@ -457,19 +470,55 @@ const Orders = () => {
           width={800}
         >
           {selectedOrder && (
-            <Descriptions bordered column={1}>
-              <Descriptions.Item label="Mã đơn hàng">{selectedOrder.serialNumber}</Descriptions.Item>
-              <Descriptions.Item label="ID đơn hàng">{selectedOrder.orderId}</Descriptions.Item>
-              <Descriptions.Item label="ID người dùng">{selectedOrder.userId}</Descriptions.Item>
-              <Descriptions.Item label="Tên người nhận">{selectedOrder.receiveName}</Descriptions.Item>
-              <Descriptions.Item label="Địa chỉ nhận">{selectedOrder.receiveAddress}</Descriptions.Item>
-              <Descriptions.Item label="Số điện thoại">{selectedOrder.receivePhone}</Descriptions.Item>
-              <Descriptions.Item label="Tổng tiền">{formatCurrency(selectedOrder.totalPrice)}</Descriptions.Item>
-              <Descriptions.Item label="Trạng thái">{getStatusTag(selectedOrder.status)}</Descriptions.Item>
-              <Descriptions.Item label="Ghi chú">{selectedOrder.note || 'Không có ghi chú'}</Descriptions.Item>
-              <Descriptions.Item label="Ngày đặt hàng">{formatDate(selectedOrder.createdAt)}</Descriptions.Item>
-              <Descriptions.Item label="Ngày nhận hàng">{formatDate(selectedOrder.receivedAt)}</Descriptions.Item>
-            </Descriptions>
+            <>
+              <Descriptions bordered column={1}>
+                <Descriptions.Item label="Mã đơn hàng">{selectedOrder.serialNumber}</Descriptions.Item>
+                <Descriptions.Item label="ID đơn hàng">{selectedOrder.orderId}</Descriptions.Item>
+                <Descriptions.Item label="ID người dùng">{selectedOrder.userId}</Descriptions.Item>
+                <Descriptions.Item label="Tên người nhận">{selectedOrder.receiveName}</Descriptions.Item>
+                <Descriptions.Item label="Địa chỉ nhận">{selectedOrder.receiveAddress}</Descriptions.Item>
+                <Descriptions.Item label="Số điện thoại">{selectedOrder.receivePhone}</Descriptions.Item>
+                <Descriptions.Item label="Tổng tiền">{formatCurrency(selectedOrder.totalPrice)}</Descriptions.Item>
+                <Descriptions.Item label="Trạng thái">{getStatusTag(selectedOrder.status)}</Descriptions.Item>
+                <Descriptions.Item label="Ghi chú">{selectedOrder.note || 'Không có ghi chú'}</Descriptions.Item>
+                <Descriptions.Item label="Ngày đặt hàng">{formatDate(selectedOrder.createdAt)}</Descriptions.Item>
+                <Descriptions.Item label="Ngày nhận hàng">{formatDate(selectedOrder.receivedAt)}</Descriptions.Item>
+                <Descriptions.Item label="URL thanh toán">{selectedOrder.payUrl || 'Không có'}</Descriptions.Item>
+              </Descriptions>
+
+              <Title level={4} style={{ marginTop: 16, color: '#333' }}>
+                Chi tiết sản phẩm
+              </Title>
+              <Table
+                columns={[
+                  {
+                    title: 'Tên sản phẩm',
+                    dataIndex: 'productName',
+                    key: 'productName',
+                  },
+                  {
+                    title: 'Số lượng',
+                    dataIndex: 'orderQuantity',
+                    key: 'orderQuantity',
+                  },
+                  {
+                    title: 'Đơn giá',
+                    dataIndex: 'unitPrice',
+                    key: 'unitPrice',
+                    render: (value) => formatCurrency(value),
+                  },
+                  {
+                    title: 'Thành tiền',
+                    key: 'total',
+                    render: (_, record) => formatCurrency(record.orderQuantity * record.unitPrice),
+                  },
+                ]}
+                dataSource={selectedOrder.items || []}
+                rowKey="id"
+                pagination={false}
+                locale={{ emptyText: 'Không có sản phẩm trong đơn hàng.' }}
+              />
+            </>
           )}
         </Modal>
       </div>

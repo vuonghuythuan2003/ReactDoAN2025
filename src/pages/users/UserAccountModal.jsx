@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchUserAccount, updateUserAccount, changePassword, resetUserAccount } from '../../redux/reducers/AccountUserSlice';
-import { Modal, Tabs, Form, Input, Button, Typography, Spin, Avatar, Upload } from 'antd';
+import { fetchWishList, removeFromWishList, resetWishList } from '../../redux/reducers/WishListSlice';
+import { Modal, Tabs, Form, Input, Button, Typography, Spin, Avatar, Upload, Table } from 'antd';
 import { toast } from 'react-toastify';
 import { UploadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { getUserId, removeToken, removeUserId, removeRoles } from '../../api/index'; // Quản lý cookies
 
 const { Title, Text } = Typography;
 
@@ -12,6 +14,7 @@ const UserAccountModal = ({ visible, onClose, userId, onLogout }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { userAccount, loading, error } = useSelector((state) => state.accountUser);
+    const { wishList, loading: wishListLoading } = useSelector((state) => state.wishList);
     const [updateForm] = Form.useForm();
     const [passwordForm] = Form.useForm();
     const [fileList, setFileList] = useState([]);
@@ -19,6 +22,7 @@ const UserAccountModal = ({ visible, onClose, userId, onLogout }) => {
     useEffect(() => {
         if (visible && userId) {
             dispatch(fetchUserAccount(userId));
+            dispatch(fetchWishList()); // Lấy danh sách WishList
         }
     }, [visible, userId, dispatch]);
 
@@ -49,7 +53,7 @@ const UserAccountModal = ({ visible, onClose, userId, onLogout }) => {
             if (error === 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại') {
                 toast.error(error, { position: 'top-right', autoClose: 3000 });
                 setTimeout(() => {
-                    onLogout();
+                    handleLogout();
                     navigate('/login');
                 }, 3000);
             } else {
@@ -64,14 +68,14 @@ const UserAccountModal = ({ visible, onClose, userId, onLogout }) => {
             toast.success('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.', { position: 'top-right', autoClose: 3000 });
             passwordForm.resetFields();
             setTimeout(() => {
-                onLogout();
+                handleLogout();
                 onClose();
             }, 3000);
         } catch (error) {
             if (error === 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại') {
                 toast.error(error, { position: 'top-right', autoClose: 3000 });
                 setTimeout(() => {
-                    onLogout();
+                    handleLogout();
                     navigate('/login');
                 }, 3000);
             } else {
@@ -80,13 +84,28 @@ const UserAccountModal = ({ visible, onClose, userId, onLogout }) => {
         }
     };
 
+    const handleRemoveFromWishList = async (wishListId) => {
+        try {
+            await dispatch(removeFromWishList(wishListId)).unwrap();
+            toast.success('Đã xóa khỏi danh sách yêu thích!', { position: 'top-right', autoClose: 3000 });
+            dispatch(fetchWishList()); // Cập nhật lại danh sách
+        } catch (error) {
+            toast.error(error || 'Có lỗi xảy ra!', { position: 'top-right', autoClose: 3000 });
+        }
+    };
+
     const handleLogout = () => {
-        onLogout();
-        onClose();
+        removeToken(); // Xóa token
+        removeUserId(); // Xóa userId
+        removeRoles(); // Xóa roles
+        onLogout(); // Gọi callback đăng xuất
+        onClose(); // Đóng modal
+        navigate('/login'); // Chuyển hướng về trang đăng nhập
     };
 
     const handleClose = () => {
         dispatch(resetUserAccount());
+        dispatch(resetWishList());
         updateForm.resetFields();
         passwordForm.resetFields();
         setFileList([]);
@@ -114,6 +133,42 @@ const UserAccountModal = ({ visible, onClose, userId, onLogout }) => {
             </Modal>
         );
     }
+
+    const wishListColumns = [
+        {
+            title: 'Hình ảnh',
+            dataIndex: 'productImage',
+            key: 'productImage',
+            render: (image) => (
+                <img src={image || 'https://picsum.photos/50'} alt="product" style={{ width: 50, height: 50 }} />
+            ),
+        },
+        {
+            title: 'Tên sản phẩm',
+            dataIndex: 'productName',
+            key: 'productName',
+        },
+        {
+            title: 'Giá',
+            dataIndex: 'price',
+            key: 'price',
+            render: (price) => (price != null ? price.toLocaleString('vi-VN') + ' VNĐ' : 'Liên hệ'),
+        },
+        {
+            title: 'Hành động',
+            key: 'action',
+            render: (_, record) => (
+                <Button
+                    type="primary"
+                    danger
+                    onClick={() => handleRemoveFromWishList(record.wishListId)}
+                    disabled={wishListLoading}
+                >
+                    Xóa
+                </Button>
+            ),
+        },
+    ];
 
     const tabItems = [
         {
@@ -225,7 +280,17 @@ const UserAccountModal = ({ visible, onClose, userId, onLogout }) => {
                     <Form.Item
                         label="Xác nhận mật khẩu mới"
                         name="confirmNewPass"
-                        rules={[{ required: true, message: 'Vui lòng xác nhận mật khẩu mới!' }]}
+                        rules={[
+                            { required: true, message: 'Vui lòng xác nhận mật khẩu mới!' },
+                            ({ getFieldValue }) => ({
+                                validator(_, value) {
+                                    if (!value || getFieldValue('newPass') === value) {
+                                        return Promise.resolve();
+                                    }
+                                    return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
+                                },
+                            }),
+                        ]}
                     >
                         <Input.Password placeholder="Xác nhận mật khẩu mới" />
                     </Form.Item>
@@ -239,6 +304,21 @@ const UserAccountModal = ({ visible, onClose, userId, onLogout }) => {
         },
         {
             key: '4',
+            label: 'Danh sách yêu thích',
+            children: (
+                <div style={{ padding: '20px' }}>
+                    <Table
+                        columns={wishListColumns}
+                        dataSource={wishList}
+                        rowKey="wishListId"
+                        pagination={false}
+                        locale={{ emptyText: 'Bạn chưa có sản phẩm nào trong danh sách yêu thích.' }}
+                    />
+                </div>
+            ),
+        },
+        {
+            key: '5',
             label: 'Đăng xuất',
             children: (
                 <div style={{ textAlign: 'center', padding: '20px' }}>
